@@ -22,4 +22,5 @@ setup(name='pydantic_cli',
       author_email='michael.kocher@me.com',
       license='MIT',
       packages=['pydantic_cli'],
+      tests_require = ['nose'],
       zip_safe=False)
