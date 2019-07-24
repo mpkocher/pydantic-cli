@@ -11,7 +11,7 @@ from pydantic import BaseModel
 log = logging.getLogger(__name__)
 
 
-VERSION = (0, 2, 0)
+VERSION = (0, 3, 0)
 
 __version__ = ".".join([str(i) for i in VERSION])
 
