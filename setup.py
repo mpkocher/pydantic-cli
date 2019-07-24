@@ -23,4 +23,10 @@ setup(name='pydantic_cli',
       license='MIT',
       packages=['pydantic_cli'],
       tests_require = ['nose'],
-      zip_safe=False)
+      zip_safe=False,
+      classifiers=[
+          "Programming Language :: Python :: 3",
+          "License :: OSI Approved :: MIT License",
+          "Operating System :: OS Independent",
+      ]
+      )
