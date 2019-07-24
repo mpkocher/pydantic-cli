@@ -123,8 +123,8 @@ from pydantic_cli import run_and_exit
 
 def custom_exception_handler(ex) -> int:
     exception_map = dict(ValueError=3, IOError=7)
-    sys.stderr.write(ex.getMessage)
-    exit_code = exception_map.get(ex, 1)
+    sys.stderr.write(str(ex))
+    exit_code = exception_map.get(ex.__class__, 1)
     return exit_code
 
 
@@ -132,7 +132,7 @@ if __name__ == '__main__':
     run_and_exit(MinOptions, example_runner, exception_handler=custom_exception_handler)
 ```
 
-Similarly, the post execution hook can be called. This function is `Callable[[int, float], None]` that is the exit code and program runtime in sec.
+Similarly, the post execution hook can be called. This function is `Callable[[int, float], None]` that is the `exit code` and `program runtime` in sec as input.
 
 
 ```python
@@ -141,14 +141,14 @@ import sys
 from pydantic_cli import run_and_exit
 
 
-def post_exe_hook_handler(exit_code: int, run_time_sec:float):
+def custom_epilogue_handler(exit_code: int, run_time_sec:float):
     m = "Success" if exit_code else "Failed"
     msg = f"Completed running ({m}) in {run_time_sec:.2f} sec"
     print(msg)
 
 
 if __name__ == '__main__':
-    run_and_exit(MinOptions, example_runner, epilogue_handler=post_exe_hook_handler)
+    run_and_exit(MinOptions, example_runner, epilogue_handler=custom_epilogue_handler)
 
 ```
 
