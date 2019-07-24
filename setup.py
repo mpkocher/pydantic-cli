@@ -15,7 +15,7 @@ def _read(file_name):
 
 setup(name='pydantic_cli',
       version=version,
-      description='The funniest joke in the world',
+      description='Turn Pydantic defined Data Models into CLI Tools',
       long_description=_read('README.md'),
       long_description_content_type="text/markdown",
       url='http://github.com/mpkocher/pydantic-cli',
