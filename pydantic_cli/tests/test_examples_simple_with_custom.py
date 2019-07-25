@@ -15,5 +15,5 @@ class TestExamples(TestCase):
         self._run_with_args(['/path/to/file.txt'])
 
     def test_simple_02(self):
-        self._run_with_args(['/path/to/file.txt', '--max-records', '1234'])
+        self._run_with_args(['/path/to/file.txt', '-m', '1234'])
 

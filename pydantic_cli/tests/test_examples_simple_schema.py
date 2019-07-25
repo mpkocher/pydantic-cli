@@ -12,9 +12,13 @@ class TestExamples(TestCase):
         self.assertEqual(exit_code, 0)
 
     def test_01(self):
-        args = '-f /path/to/file.txt --max-records 1234 -s 1.234 --max-score 10.234'
+        args = '-f /path/to/file.txt --max_records 1234 -s 1.234 --max_filter_score 10.234'
         self._run_with_args(args.split())
 
     def test_02(self):
-        self._run_with_args(['-f', '/path/to/file.txt', '--min-score', '12356'])
+        args = '-f /path/to/file.txt -m 1234 -s 1.234 -S 10.234'
+        self._run_with_args(args.split())
+
+    def test_03(self):
+        self._run_with_args(['-f', '/path/to/file.txt', '-s', '1.234'])
 
