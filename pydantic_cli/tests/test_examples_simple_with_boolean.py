@@ -1,7 +1,7 @@
 from unittest import TestCase
 
 from pydantic_cli import to_runner
-from pydantic_cli.examples.simple_with_custom import Options, example_runner
+from pydantic_cli.examples.simple_with_boolean import Options, example_runner
 
 
 class TestExamples(TestCase):
@@ -12,8 +12,5 @@ class TestExamples(TestCase):
         self.assertEqual(exit_code, 0)
 
     def test_simple_01(self):
-        self._run_with_args(['/path/to/file.txt'])
-
-    def test_simple_02(self):
-        self._run_with_args(['/path/to/file.txt', '-m', '1234'])
+        self._run_with_args(['/path/to/file.txt', '--run_training', 'True'])
 

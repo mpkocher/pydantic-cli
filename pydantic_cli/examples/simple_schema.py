@@ -20,22 +20,21 @@ class Options(BaseModel):
         extras={'cli': ("-f", "--input-file")}
     )
 
-    # Why isn't this validation working?
     max_records: int = Schema(
         123,
         title="Max Records",
         description="Max number of records",
         gt=0,
-        extras={'cli': ('-m', '--max-records')},
+        extras={'cli': ('-m', )},
     )
 
     min_filter_score: float = Schema(
         ...,
         title="Min Score",
         description="Minimum Score Filter that will be applied to the records",
-        extras={'cli': ('-s', '--min-score')},
+        extras={'cli': ('-s', )},
         gt=0
-        # or extras={'cli': ('--min-filter-score', )}
+        # or extras={'cli': ('-s', '--min-filter-score', )}
     )
 
     max_filter_score: Optional[float] = Schema(
@@ -43,8 +42,8 @@ class Options(BaseModel):
         title="Max Score",
         description="Maximum Score Filter that will be applied to the records",
         gt=0,
-        extras={'cli': ('--max-score', )}
-        # or extras={'cli': ('--min-filter-score', )}
+        extras={'cli': ('-S', )}
+        # or extras={'cli': ('-S', '--min-filter-score', )}
     )
 
 

@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 class Options(BaseModel):
 
     class Config(ConfigDefaults):
-        CLI_EXTRA_OPTIONS = {'max_records': ('-m', '--max-records')}
+        CLI_EXTRA_OPTIONS = {'max_records': ('-m', )}
 
     input_file: str
     max_records: int = 10

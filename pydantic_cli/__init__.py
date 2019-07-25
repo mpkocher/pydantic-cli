@@ -10,8 +10,9 @@ from pydantic import BaseModel
 
 log = logging.getLogger(__name__)
 
+NOT_PROVIDED = object()
 
-VERSION = (0, 3, 0)
+VERSION = (0, 4, 0)
 
 __version__ = ".".join([str(i) for i in VERSION])
 
@@ -31,32 +32,66 @@ def _parser_add_version(parser: ArgumentParser, version: T.AnyStr) -> ArgumentPa
     return parser
 
 
+def __to_field_description(default_value=NOT_PROVIDED, field_type=NOT_PROVIDED, description=None):
+    desc = "" if description is None else description
+    t = "" if field_type is NOT_PROVIDED else f"type:{field_type}"
+    v = "" if default_value is NOT_PROVIDED else f"default:{default_value}"
+    if not (t + v):
+        xs = "".join([t, v])
+    else:
+        xs = " ".join([t, v])
+    return f"{desc} ({xs})"
+
+
+def __process_tuple(tuple_one_or_two, long_arg):
+    """
+    If the custom args are provided as only short, then
+    add the long version.
+    """
+    lx = list(tuple_one_or_two)
+
+    def is_short(xs):
+        # xs = '-s'
+        return len(xs) == 2
+
+    if len(lx) == 1:
+        first = lx[0]
+        if is_short(first):
+            return first, long_arg
+        else:
+            return tuple_one_or_two
+    else:
+        return tuple_one_or_two
+
+
 def _add_pydantic_field_to_parser(p, ix, field, override_cli=None) -> ArgumentParser:
 
     schema = field.schema
+    default_long_arg = f"--{ix}"
 
     is_positional = field.required
 
     # Should be a tuple2[Str, Str]
     try:
-        cli_custom = schema.extra['extras']['cli']
+        cli_custom = __process_tuple(schema.extra['extras']['cli'], default_long_arg)
         is_positional = False
     except KeyError:
         if override_cli is None:
             if is_positional:
                 cli_custom = (ix, )
             else:
-                cli_custom = (f'--{ix}', )
+                cli_custom = (default_long_arg, )
         else:
-            cli_custom = override_cli
+            cli_custom = __process_tuple(override_cli, default_long_arg)
 
     log.debug(f"Creating Argument with opts:{cli_custom}, default={field.default} type={field.type_} positional={is_positional} required={field.required}")
 
+    f = __to_field_description
     # this API is so thorny to code around. if dest='x' and p.add_argument('x') will raise
     if is_positional:
-        p.add_argument(*cli_custom, help=schema.description, default=field.default)
+        p.add_argument(*cli_custom, help=f(NOT_PROVIDED, field.type_, schema.description), default=field.default)
     else:
-        p.add_argument(*cli_custom, help=schema.description, default=field.default, dest=ix, required=field.required)
+        p.add_argument(*cli_custom, help=f(field.default, field.type_, schema.description), default=field.default, dest=ix, required=field.required)
     return p
 
 
@@ -81,8 +116,7 @@ def pydantic_class_to_parser(cls, description=None, version=None) -> ArgumentPar
     """
     # Is there really not a lib for a JsonSchema Property to argparse option?
 
-    p = ArgumentParser(description=description,
-                       formatter_class=ArgumentDefaultsHelpFormatter)
+    p = ArgumentParser(description=description)
 
     _add_pydantic_class_to_parser(p, cls)
 
