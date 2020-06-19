@@ -101,7 +101,7 @@ The `--help` is quite minimal (due to the lack of metadata), however, verbosely 
 For customization of the CLI args, such as max number of records is `-m 1234` in the above example, there are two approaches.
 
 - The first is the "quick" method that is a minor change to the `Config` of the Pydantic Data model. 
-- The second "Field" method is to define the metadata in the [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/#Field-creation) 
+- The second "Field" method is to define the metadata in the [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) 
 
 
 ### Quick Model for Customization
