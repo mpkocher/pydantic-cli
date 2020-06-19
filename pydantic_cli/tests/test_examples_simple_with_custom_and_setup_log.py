@@ -10,8 +10,8 @@ class TestExamples(TestCase):
     def _run_with_args(self, args, exit_code=0):
         f = to_runner(Options, example_runner, prologue_handler=prologue_handler,
                       epilogue_handler=epilogue_handler)
-        exit_code = f(args)
-        self.assertEqual(exit_code, exit_code)
+        code = f(args)
+        self.assertEqual(code, exit_code)
 
     def test_simple_01(self):
         self._run_with_args(['/path/to/file.txt'])
