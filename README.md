@@ -2,10 +2,11 @@
 
 Turn Pydantic defined Data Models into CLI Tools!
 
+**Requires Pydantic** `>=1.5.1`. 
 
 ## Features
 
-1. Schema driven interfaces built on top of [Pydantic](https://github.com/samuelcolvin/pydantic)
+1. Field driven interfaces built on top of [Pydantic](https://github.com/samuelcolvin/pydantic)
 2. Validation is performed in a single location as defined by Pydantic's validation model
 3. CLI parsing is only structurally validating that the args or optional arguments are provided
 4. Clear interface between the CLI and your application code
@@ -100,7 +101,7 @@ The `--help` is quite minimal (due to the lack of metadata), however, verbosely 
 For customization of the CLI args, such as max number of records is `-m 1234` in the above example, there are two approaches.
 
 - The first is the "quick" method that is a minor change to the `Config` of the Pydantic Data model. 
-- The second "schema" method is to define the metadata in the [`Schema` model in Pydantic](https://pydantic-docs.helpmanual.io/#schema-creation) 
+- The second "Field" method is to define the metadata in the [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/#Field-creation) 
 
 
 ### Quick Model for Customization
@@ -122,7 +123,7 @@ class MinOptions(BaseModel):
 
 ```
 
-You can also override the "long" argument. However, **note this is starting to add a new layer of indirection** on top of the schema. (e.g., 'max_records' to '--max-records') that may or may not be useful.
+You can also override the "long" argument. However, **note this is starting to add a new layer of indirection** on top of the Field. (e.g., 'max_records' to '--max-records') that may or may not be useful.
 
 
 ```python
@@ -139,11 +140,11 @@ class MinOptions(BaseModel):
 ```
 
 
-### Schema Approach
+### Field Approach
 
 
 ```python
-from pydantic import BaseModel, Schema
+from pydantic import BaseModel, Field
 
 
 class Options(BaseModel):
@@ -152,7 +153,7 @@ class Options(BaseModel):
         validate_all = True
         validate_assignment = True
 
-    input_file: str = Schema(
+    input_file: str = Field(
         ..., # this implicitly means required=True
         title="Input File",
         description="Path to the input file",
@@ -160,7 +161,7 @@ class Options(BaseModel):
         extras={"cli": ('-f', '--input-file')}
     )
 
-    max_records: int = Schema(
+    max_records: int = Field(
         123,
         title="Max Records",
         description="Max number of records to process",
@@ -245,8 +246,8 @@ Defining a subparser to your commandline tool is enabled by creating a container
 
 ```python
 import typing as T
-from pydantic import BaseModel
-from pydantic.schema import UrlStr
+from pydantic import BaseModel, AnyUrl
+
 
 
 from pydantic_cli.examples import ConfigDefaults
@@ -268,7 +269,7 @@ class BetaOptions(BaseModel):
         CLI_EXTRA_OPTIONS = {'url': ('-u', '--url'),
                              'num_retries': ('-n', '--num-retries')}
 
-    url: UrlStr
+    url: AnyUrl
     num_retries: int = 3
 
 
