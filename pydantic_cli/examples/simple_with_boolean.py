@@ -15,7 +15,6 @@ class Options(BaseModel):
 
 def example_runner(opts: Options) -> int:
     print(f"Mock example running with {opts}")
-    print(f"Fields {opts.fields}")
     return 0
 
 

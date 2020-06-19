@@ -52,7 +52,6 @@ def example_runner(opts: Options) -> int:
     print((opts.input_file, type(opts.input_file)))
     print(opts.max_records, type(opts.max_records))
     print(opts.min_filter_score, type(opts.min_filter_score))
-    print(f"Fields {opts.fields}")
     return 0
 
 
