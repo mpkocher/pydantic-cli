@@ -7,18 +7,21 @@ import typing as T
 
 
 from pydantic import BaseModel
+from pydantic.fields import ModelField
 
 log = logging.getLogger(__name__)
 
 NOT_PROVIDED = object()
 
-VERSION = (0, 4, 0)
+VERSION = (1, 0, 0)
 
 __version__ = ".".join([str(i) for i in VERSION])
 
 __all__ = ['to_runner', 'run_and_exit',
            'to_runner_sp', 'run_sp_and_exit',
-           'default_exception_handler', 'default_epilogue_handler']
+           'default_exception_handler',
+           'default_prologue_handler',
+           'default_epilogue_handler']
 
 
 class SubParser(T.NamedTuple):
@@ -64,16 +67,17 @@ def __process_tuple(tuple_one_or_two, long_arg):
         return tuple_one_or_two
 
 
-def _add_pydantic_field_to_parser(p, ix, field, override_cli=None) -> ArgumentParser:
+def _add_pydantic_field_to_parser(p, ix, field: ModelField, override_cli=None) -> ArgumentParser:
 
-    schema = field.schema
+    description = field.field_info.description
+    extra = field.field_info.extra
     default_long_arg = f"--{ix}"
 
     is_positional = field.required
 
     # Should be a tuple2[Str, Str]
     try:
-        cli_custom = __process_tuple(schema.extra['extras']['cli'], default_long_arg)
+        cli_custom = __process_tuple(extra['extras']['cli'], default_long_arg)
         is_positional = False
     except KeyError:
         if override_cli is None:
@@ -89,9 +93,9 @@ def _add_pydantic_field_to_parser(p, ix, field, override_cli=None) -> ArgumentPa
     f = __to_field_description
     # this API is so thorny to code around. if dest='x' and p.add_argument('x') will raise
     if is_positional:
-        p.add_argument(*cli_custom, help=f(NOT_PROVIDED, field.type_, schema.description), default=field.default)
+        p.add_argument(*cli_custom, help=f(NOT_PROVIDED, field.type_, description), default=field.default)
     else:
-        p.add_argument(*cli_custom, help=f(field.default, field.type_, schema.description), default=field.default, dest=ix, required=field.required)
+        p.add_argument(*cli_custom, help=f(field.default, field.type_, description), default=field.default, dest=ix, required=field.required)
     return p
 
 
@@ -144,7 +148,21 @@ def default_epilogue_handler(exit_code: int, run_time_sec: float):
     pass
 
 
-def _runner(args, parser:ArgumentParser, exception_handler, epilogue_handler) -> int:
+def default_prologue_handler(opts) -> None:
+    """
+    General Hook to call before executing your runner func (e.g., f(opt)).
+
+    Note this is semantically different from what argparse defines as a "prologue".
+
+    This can be used to setup logging.
+
+    :param opts: Will be an instance of your option class
+    :return: None
+    """
+    pass
+
+
+def _runner(args, parser: ArgumentParser, exception_handler, prologue_handler, epilogue_handler) -> int:
 
     def now():
         return datetime.datetime.now()
@@ -171,6 +189,7 @@ def _runner(args, parser:ArgumentParser, exception_handler, epilogue_handler) ->
 
         # this validation interface is a bit odd
         cls.validate(opts)
+        prologue_handler(opts)
         exit_code = runner_func(opts)
     except Exception as e:
         exit_code = exception_handler(e)
@@ -187,6 +206,7 @@ def _runner_with_args(
     description=None,
     version=None,
     exception_handler=default_exception_handler,
+    prologue_handler=default_prologue_handler,
     epilogue_handler=default_epilogue_handler,
 ) -> int:
 
@@ -198,7 +218,7 @@ def _runner_with_args(
     # this is a bit of hackery
     parser.set_defaults(func=runner_func, cls=cls)
 
-    return _runner(args, parser, exception_handler, epilogue_handler)
+    return _runner(args, parser, exception_handler, prologue_handler, epilogue_handler)
 
 
 def to_runner(
@@ -207,6 +227,7 @@ def to_runner(
     description=None,
     version=None,
     exception_handler=default_exception_handler,
+    prologue_handler=default_prologue_handler,
     epilogue_handler=default_epilogue_handler,
 ):
     def f(args):
@@ -217,6 +238,7 @@ def to_runner(
             description=description,
             version=version,
             exception_handler=exception_handler,
+            prologue_handler=prologue_handler,
             epilogue_handler=epilogue_handler,
         )
 
@@ -229,6 +251,7 @@ def run_and_exit(
     description=None,
     version=None,
     exception_handler=default_exception_handler,
+    prologue_handler=default_prologue_handler,
     epilogue_handler=default_epilogue_handler,
     args=sys.argv[1:],
 ):
@@ -239,6 +262,7 @@ def run_and_exit(
             description=description,
             version=version,
             exception_handler=exception_handler,
+            prologue_handler=prologue_handler,
             epilogue_handler=epilogue_handler,
         )(args)
     )
@@ -265,12 +289,13 @@ def to_subparser(models: T.Dict[T.AnyStr, SubParser], description=None, version=
 def to_runner_sp(subparsers: T.Dict[T.AnyStr, T.Type[BaseModel]],
                  description=None, version=None,
                  exception_handler=default_exception_handler,
+                 prologue_handler=default_prologue_handler,
                  epilogue_handler=default_epilogue_handler) -> T.Callable[[T.List[T.AnyStr]], int]:
 
     def f(args):
         p = to_subparser(subparsers, description=description, version=version)
 
-        return _runner(args, p, exception_handler, epilogue_handler)
+        return _runner(args, p, exception_handler, prologue_handler, epilogue_handler)
 
     return f
 
@@ -279,11 +304,13 @@ def run_sp_and_exit(subparsers: T.Dict[T.AnyStr, T.Type[BaseModel]],
                     description: T.Optional[T.AnyStr] = None,
                     version: T.Optional[T.AnyStr] = None,
                     exception_handler=default_exception_handler,
+                    prologue_handler=default_prologue_handler,
                     epilogue_handler=default_epilogue_handler,
                     args=sys.argv[1:]):
 
     f = to_runner_sp(subparsers, description=description, version=version,
                      exception_handler=exception_handler,
+                     prologue_handler=default_prologue_handler,
                      epilogue_handler=epilogue_handler)
 
     sys.exit(f(args))

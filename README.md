@@ -2,10 +2,11 @@
 
 Turn Pydantic defined Data Models into CLI Tools!
 
+**Requires Pydantic** `>=1.5.1`. 
 
 ## Features
 
-1. Schema driven interfaces built on top of [Pydantic](https://github.com/samuelcolvin/pydantic)
+1. Schema driven interfaces built on top of [Pydantic](https://github.com/samuelcolvin/pydantic) data models
 2. Validation is performed in a single location as defined by Pydantic's validation model
 3. CLI parsing is only structurally validating that the args or optional arguments are provided
 4. Clear interface between the CLI and your application code
@@ -91,7 +92,7 @@ my-tool /path/to/input.txt --max_records 1234
 with `--max_records` being optional to the commandline interface.
 
 
-**WARNING**: Boolean values must be communicated explicitly (e.g., `--run_training True`)
+**WARNING**: Boolean values must be communicated explicitly (e.g., `--run_training True`). This explicitness is chosen to avoid confusion with auto-generated option flags (`--is-run_training` or `--no-run_training`) that do not directly map to the core Pydantic data model.
 
 
 The `--help` is quite minimal (due to the lack of metadata), however, verbosely named arguments can often be good enough to communicate the intent of the commandline interface.
@@ -100,7 +101,7 @@ The `--help` is quite minimal (due to the lack of metadata), however, verbosely 
 For customization of the CLI args, such as max number of records is `-m 1234` in the above example, there are two approaches.
 
 - The first is the "quick" method that is a minor change to the `Config` of the Pydantic Data model. 
-- The second "schema" method is to define the metadata in the [`Schema` model in Pydantic](https://pydantic-docs.helpmanual.io/#schema-creation) 
+- The second "Field" method is to define the metadata in the [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) 
 
 
 ### Quick Model for Customization
@@ -122,7 +123,7 @@ class MinOptions(BaseModel):
 
 ```
 
-You can also override the "long" argument. However, **note this is starting to add a new layer of indirection** on top of the schema. (e.g., 'max_records' to '--max-records') that may or may not be useful.
+You can also override the "long" argument. However, **note this is starting to add a new layer of indirection** on top of the Field. (e.g., 'max_records' to '--max-records') that may or may not be useful.
 
 
 ```python
@@ -139,11 +140,11 @@ class MinOptions(BaseModel):
 ```
 
 
-### Schema Approach
+### Schema Driven Approach using Pydantic Field
 
 
 ```python
-from pydantic import BaseModel, Schema
+from pydantic import BaseModel, Field
 
 
 class Options(BaseModel):
@@ -152,7 +153,7 @@ class Options(BaseModel):
         validate_all = True
         validate_assignment = True
 
-    input_file: str = Schema(
+    input_file: str = Field(
         ..., # this implicitly means required=True
         title="Input File",
         description="Path to the input file",
@@ -160,7 +161,7 @@ class Options(BaseModel):
         extras={"cli": ('-f', '--input-file')}
     )
 
-    max_records: int = Schema(
+    max_records: int = Field(
         123,
         title="Max Records",
         description="Max number of records to process",
@@ -173,8 +174,9 @@ class Options(BaseModel):
 
 ## Hooks into the CLI Execution
 
-- exception handler
-- epilogue handler
+- exception handler (log or write to stderr and map specific exception classes to integer exit codes)
+- prologue handler (pre-execution hook)
+- epilogue handler (post-execution hook)
 
 Both of these cases can be customized to by passing in a function to the running/execution method. 
 
@@ -199,6 +201,23 @@ def custom_exception_handler(ex) -> int:
 if __name__ == '__main__':
     run_and_exit(MinOptions, example_runner, exception_handler=custom_exception_handler)
 ```
+
+A general pre-execution hook can be called using the `prologue_handler`. This function is `Callable[[T], None]`, where `T` is an instance of your Pydantic data model.
+
+This setup hook will be called before the execution of your main function (e.g., `example_runner`).
+
+
+```python
+import sys
+import logging
+
+def custom_prologue_handler(opts) -> None:
+    logging.basicConfig(level="DEBUG", stream=sys.stdout)
+
+if __name__ == '__main__':
+    run_and_exit(MinOptions, example_runner, prolgue_handler=custom_prologue_handler)
+```
+
 
 Similarly, the post execution hook can be called. This function is `Callable[[int, float], None]` that is the `exit code` and `program runtime` in sec as input.
 
@@ -227,8 +246,8 @@ Defining a subparser to your commandline tool is enabled by creating a container
 
 ```python
 import typing as T
-from pydantic import BaseModel
-from pydantic.schema import UrlStr
+from pydantic import BaseModel, AnyUrl
+
 
 
 from pydantic_cli.examples import ConfigDefaults
@@ -250,7 +269,7 @@ class BetaOptions(BaseModel):
         CLI_EXTRA_OPTIONS = {'url': ('-u', '--url'),
                              'num_retries': ('-n', '--num-retries')}
 
-    url: UrlStr
+    url: AnyUrl
     num_retries: int = 3
 
 
@@ -277,6 +296,10 @@ if __name__ == "__main__":
     run_sp_and_exit(to_subparser_example(), description=__doc__, version='0.1.0')
 
 ```
+
+# More Examples
+
+[More examples are provided here](https://github.com/mpkocher/pydantic-cli/tree/master/pydantic_cli/examples)
 
 # Limitations
 

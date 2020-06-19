@@ -2,8 +2,7 @@
 Example of Using a Subparser
 """
 import typing as T
-from pydantic import BaseModel
-from pydantic.schema import UrlStr
+from pydantic import BaseModel, AnyUrl
 
 
 from pydantic_cli.examples import ConfigDefaults
@@ -25,7 +24,7 @@ class BetaOptions(BaseModel):
         CLI_EXTRA_OPTIONS = {'url': ('-u', '--url'),
                              'num_retries': ('-n', '--num-retries')}
 
-    url: UrlStr
+    url: AnyUrl
     num_retries: int = 3
 
 
