@@ -23,7 +23,7 @@ class Options(BaseModel):
 
 
 def example_runner(opts: Options) -> int:
-    _ = logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
+    logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
     log.info(f"pydantic_cli version={Version} Mock example running with options {opts}")
     return 0
 
