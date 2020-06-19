@@ -1,1 +1,1 @@
-pydantic >= 0.30.1
+pydantic >= 1.5, == 1.*
