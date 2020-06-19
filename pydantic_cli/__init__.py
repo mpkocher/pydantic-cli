@@ -7,12 +7,13 @@ import typing as T
 
 
 from pydantic import BaseModel
+from pydantic.fields import ModelField
 
 log = logging.getLogger(__name__)
 
 NOT_PROVIDED = object()
 
-VERSION = (0, 5, 0)
+VERSION = (1, 0, 0)
 
 __version__ = ".".join([str(i) for i in VERSION])
 
@@ -66,16 +67,17 @@ def __process_tuple(tuple_one_or_two, long_arg):
         return tuple_one_or_two
 
 
-def _add_pydantic_field_to_parser(p, ix, field, override_cli=None) -> ArgumentParser:
+def _add_pydantic_field_to_parser(p, ix, field: ModelField, override_cli=None) -> ArgumentParser:
 
-    schema = field.schema
+    description = field.field_info.description
+    extra = field.field_info.extra
     default_long_arg = f"--{ix}"
 
     is_positional = field.required
 
     # Should be a tuple2[Str, Str]
     try:
-        cli_custom = __process_tuple(schema.extra['extras']['cli'], default_long_arg)
+        cli_custom = __process_tuple(extra['extras']['cli'], default_long_arg)
         is_positional = False
     except KeyError:
         if override_cli is None:
@@ -91,9 +93,9 @@ def _add_pydantic_field_to_parser(p, ix, field, override_cli=None) -> ArgumentPa
     f = __to_field_description
     # this API is so thorny to code around. if dest='x' and p.add_argument('x') will raise
     if is_positional:
-        p.add_argument(*cli_custom, help=f(NOT_PROVIDED, field.type_, schema.description), default=field.default)
+        p.add_argument(*cli_custom, help=f(NOT_PROVIDED, field.type_, description), default=field.default)
     else:
-        p.add_argument(*cli_custom, help=f(field.default, field.type_, schema.description), default=field.default, dest=ix, required=field.required)
+        p.add_argument(*cli_custom, help=f(field.default, field.type_, description), default=field.default, dest=ix, required=field.required)
     return p
 
 
