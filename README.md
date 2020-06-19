@@ -6,7 +6,7 @@ Turn Pydantic defined Data Models into CLI Tools!
 
 ## Features
 
-1. Field driven interfaces built on top of [Pydantic](https://github.com/samuelcolvin/pydantic)
+1. Schema driven interfaces built on top of [Pydantic](https://github.com/samuelcolvin/pydantic) data models
 2. Validation is performed in a single location as defined by Pydantic's validation model
 3. CLI parsing is only structurally validating that the args or optional arguments are provided
 4. Clear interface between the CLI and your application code
