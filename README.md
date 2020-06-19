@@ -91,7 +91,7 @@ my-tool /path/to/input.txt --max_records 1234
 with `--max_records` being optional to the commandline interface.
 
 
-**WARNING**: Boolean values must be communicated explicitly (e.g., `--run_training True`)
+**WARNING**: Boolean values must be communicated explicitly (e.g., `--run_training True`). This explicitness is chosen to avoid confusion with auto-generated option flags (`--is-run_training` or `--no-run_training`) that do not directly map to the core Pydantic data model.
 
 
 The `--help` is quite minimal (due to the lack of metadata), however, verbosely named arguments can often be good enough to communicate the intent of the commandline interface.
@@ -173,8 +173,9 @@ class Options(BaseModel):
 
 ## Hooks into the CLI Execution
 
-- exception handler
-- epilogue handler
+- exception handler (log or write to stderr and map specific exception classes to integer exit codes)
+- prologue handler (pre-execution hook)
+- epilogue handler (post-execution hook)
 
 Both of these cases can be customized to by passing in a function to the running/execution method. 
 
@@ -199,6 +200,23 @@ def custom_exception_handler(ex) -> int:
 if __name__ == '__main__':
     run_and_exit(MinOptions, example_runner, exception_handler=custom_exception_handler)
 ```
+
+A general pre-execution hook can be called using the `prologue_handler`. This function is `Callable[[T], None]`, where `T` is an instance of your Pydantic data model.
+
+This setup hook will be called before the execution of your main function (e.g., `example_runner`).
+
+
+```python
+import sys
+import logging
+
+def custom_prologue_handler(opts) -> None:
+    logging.basicConfig(level="DEBUG", stream=sys.stdout)
+
+if __name__ == '__main__':
+    run_and_exit(MinOptions, example_runner, prolgue_handler=custom_prologue_handler)
+```
+
 
 Similarly, the post execution hook can be called. This function is `Callable[[int, float], None]` that is the `exit code` and `program runtime` in sec as input.
 
