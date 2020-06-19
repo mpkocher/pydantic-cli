@@ -12,7 +12,7 @@ log = logging.getLogger(__name__)
 
 NOT_PROVIDED = object()
 
-VERSION = (1, 0, 1)
+VERSION = (1, 0, 2)
 
 __version__ = ".".join([str(i) for i in VERSION])
 
@@ -309,7 +309,7 @@ def run_sp_and_exit(subparsers: T.Dict[T.AnyStr, T.Type[BaseModel]],
 
     f = to_runner_sp(subparsers, description=description, version=version,
                      exception_handler=exception_handler,
-                     prologue_handler=default_prologue_handler,
+                     prologue_handler=prologue_handler,
                      epilogue_handler=epilogue_handler)
 
     sys.exit(f(args))
