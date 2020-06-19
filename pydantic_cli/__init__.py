@@ -7,13 +7,12 @@ import typing as T
 
 
 from pydantic import BaseModel
-from pydantic.fields import ModelField
 
 log = logging.getLogger(__name__)
 
 NOT_PROVIDED = object()
 
-VERSION = (1, 0, 0)
+VERSION = (1, 0, 1)
 
 __version__ = ".".join([str(i) for i in VERSION])
 
@@ -67,7 +66,7 @@ def __process_tuple(tuple_one_or_two, long_arg):
         return tuple_one_or_two
 
 
-def _add_pydantic_field_to_parser(p, ix, field: ModelField, override_cli=None) -> ArgumentParser:
+def _add_pydantic_field_to_parser(p, ix, field, override_cli=None) -> ArgumentParser:
 
     description = field.field_info.description
     extra = field.field_info.extra
