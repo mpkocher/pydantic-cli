@@ -97,7 +97,7 @@ if __name__ == '__main__':
 Can be run with a JSON file that defines all the (required) values. 
 
 ```json
-{"hdf_file": "/path/to/file.hdf5", max_records: 5, min_filter_score: 1.5, alpha: 1.0, beta: 1.0}
+{"hdf_file": "/path/to/file.hdf5", "max_records": 5, "min_filter_score": 1.5, "alpha": 1.0, "beta": 1.0}
 ```
 
 The tool can be executed as shown below. Note, options required at the commandline as defined in the `Opts` model (e.g., 'hdf_file', 'min_filter_score', 'alpha' and 'beta') are NO longer required values supplied to the commandline tool.
@@ -225,7 +225,21 @@ For example:
 ```python
 import sys
 
+from pydantic import BaseModel
 from pydantic_cli import run_and_exit
+
+
+class MinOptions(BaseModel):
+
+    class Config:
+        CLI_EXTRA_OPTIONS = {'input_file': ('-i, '), 'max_records': ('-m', '--max-records')}
+
+    input_file: str
+    max_records: int = 10
+
+
+def example_runner(opts: MinOptions) -> int:
+    return 0
 
 
 def custom_exception_handler(ex) -> int:
@@ -260,8 +274,6 @@ Similarly, the post execution hook can be called. This function is `Callable[[in
 
 
 ```python
-import sys
-
 from pydantic_cli import run_and_exit
 
 
