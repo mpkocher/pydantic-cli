@@ -24,7 +24,7 @@ def get_version():
     with open(p) as f:
         for line in f:
             if matcher in line:
-                version = line.split("=")[1].strip()
+                version = line.split("=")[1].strip().replace('"', '')
                 return version
 
     raise ValueError(f"Unable to find version {matcher} in file={p}")
