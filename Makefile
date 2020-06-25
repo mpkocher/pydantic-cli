@@ -1,4 +1,4 @@
-.PHONY: package deploy
+.PHONY: package deploy mypy
 
 test:
 	nosetests .
@@ -9,3 +9,6 @@ package:
 
 deploy:
 	twine upload dist/*
+
+mypy:
+	mypy pydantic_cli
