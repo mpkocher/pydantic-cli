@@ -1,24 +1,18 @@
-from unittest import TestCase
-
-from pydantic_cli import to_runner
-from pydantic_cli.examples.simple_with_custom_and_setup_log import (Options, example_runner,
-                                                                    prologue_handler, epilogue_handler)
+from pydantic_cli.examples.simple_with_custom_and_setup_log import (Options, example_runner, epilogue_handler, prologue_handler)
+from . import _TestUtil, TestConfig
 
 
-class TestExamples(TestCase):
-
-    def _run_with_args(self, args, exit_code=0):
-        f = to_runner(Options, example_runner, prologue_handler=prologue_handler,
-                      epilogue_handler=epilogue_handler)
-        code = f(args)
-        self.assertEqual(code, exit_code)
+class TestExamples(_TestUtil):
+    CONFIG = TestConfig(model=Options, runner=example_runner,
+                        epilogue=epilogue_handler,
+                        prologue=prologue_handler)
 
     def test_simple_01(self):
-        self._run_with_args(['/path/to/file.txt'])
+        self.run_config(["-i", "/path/to/file.txt"])
 
     def test_simple_02(self):
-        self._run_with_args(['/path/to/file.txt', '-m', '1234', '--log_level', "INFO"])
+        self.run_config(["-i", "/path/to/file.txt", '-m', '1234', '--log_level', "INFO"])
 
     def test_simple_03(self):
-        self._run_with_args(['/path/to/file.txt', '-m', '1234', '--log_level', "BAD_LOG_LEVEL"], 1)
+        self.run_config(["-i", "/path/to/file.txt", '-m', '1234', '--log_level', "BAD_LOG_LEVEL"], exit_code=1)
 

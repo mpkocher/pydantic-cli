@@ -1,16 +1,12 @@
-from unittest import TestCase
+from . import _TestUtil, TestConfig
 
-from pydantic_cli import to_runner
 from pydantic_cli.examples.simple import Options, example_runner
 
 
-class TestExamples(TestCase):
+class TestExamples(_TestUtil):
 
-    def _run_with_args(self, args):
-        f = to_runner(Options, example_runner)
-        exit_code = f(args)
-        self.assertEqual(exit_code, 0)
+    CONFIG = TestConfig(model=Options, runner=example_runner)
 
     def test_simple_01(self):
-        self._run_with_args(['/path/to/file.txt', '1234'])
+        self.run_config(["--input_file", "/path/to/file.txt", "--max_record", '1234'])
 

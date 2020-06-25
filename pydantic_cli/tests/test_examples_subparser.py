@@ -16,7 +16,7 @@ class TestExamples(TestCase):
         self.assertEqual(exit_code, 0)
 
     def test_alpha(self):
-        self._run_with_args(['alpha', '/path/to/file.txt', '-m', '1234'])
+        self._run_with_args(['alpha', "-i", "/path/to/file.txt", '-m', '1234'])
 
     def test_beta(self):
         self._run_with_args(['beta', '--url', 'http://google.com', '-n', '3'])
