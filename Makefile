@@ -15,3 +15,6 @@ mypy:
 
 format:
 	black pydantic_cli
+
+clean:
+	rm -rf build dist *.egg-info
