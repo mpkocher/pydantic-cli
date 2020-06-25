@@ -10,7 +10,7 @@ from typing import Callable as F
 
 from pydantic import BaseModel
 
-M = T.TypeVar('M', bound=BaseModel)
+M = T.TypeVar("M", bound=BaseModel)
 
 log = logging.getLogger(__name__)
 
@@ -20,12 +20,16 @@ VERSION = (2, 0, 0)
 
 __version__ = ".".join([str(i) for i in VERSION])
 
-__all__ = ['to_runner', 'run_and_exit',
-           'to_runner_sp', 'run_sp_and_exit',
-           'default_exception_handler',
-           'default_prologue_handler',
-           'default_epilogue_handler',
-           'DefaultConfig']
+__all__ = [
+    "to_runner",
+    "run_and_exit",
+    "to_runner_sp",
+    "run_sp_and_exit",
+    "default_exception_handler",
+    "default_prologue_handler",
+    "default_epilogue_handler",
+    "DefaultConfig",
+]
 
 
 class DefaultConfig:
@@ -45,18 +49,14 @@ class TerminalEagerCommand(Exception):
 
 
 class EagerHelpAction(Action):
-
-    def __init__(self,
-                 option_strings,
-                 dest=SUPPRESS,
-                 default=SUPPRESS,
-                 help=None):
+    def __init__(self, option_strings, dest=SUPPRESS, default=SUPPRESS, help=None):
         super(EagerHelpAction, self).__init__(
             option_strings=option_strings,
             dest=dest,
             default=default,
             nargs=0,
-            help=help)
+            help=help,
+        )
 
     def __call__(self, parser, namespace, values, option_string=None):
         parser.print_help()
@@ -64,19 +64,21 @@ class EagerHelpAction(Action):
 
 
 class EagerVersionAction(Action):
-
-    def __init__(self,
-                 option_strings,
-                 version=__version__,
-                 dest=SUPPRESS,  # wtf does this do?
-                 default=SUPPRESS,
-                 help="show program's version number and exit"):
+    def __init__(
+        self,
+        option_strings,
+        version=__version__,
+        dest=SUPPRESS,  # wtf does this do?
+        default=SUPPRESS,
+        help="show program's version number and exit",
+    ):
         super(EagerVersionAction, self).__init__(
             option_strings=option_strings,
             dest=dest,
             default=default,
             nargs=0,
-            help=help)
+            help=help,
+        )
         self.version = version
 
     def __call__(self, parser, namespace, values, option_string=None):
@@ -90,7 +92,6 @@ class EagerVersionAction(Action):
 
 
 class CustomArgumentParser(ArgumentParser):
-
     def exit(self, status: int = 0, message: T.Optional[T.Text] = None) -> T.NoReturn:
         # THIS IS NO longer used because of the custom Version and Help
         # This is a bit of an issue to return the exit code properly
@@ -106,7 +107,9 @@ class SubParser(T.NamedTuple):
 
 
 def _parser_add_help(p: CustomArgumentParser):
-    p.add_argument('--help', help="Print Help and Exit", action=EagerHelpAction, default=SUPPRESS)
+    p.add_argument(
+        "--help", help="Print Help and Exit", action=EagerHelpAction, default=SUPPRESS
+    )
     return p
 
 
@@ -115,7 +118,9 @@ def _parser_add_version(parser: ArgumentParser, version: T.Text) -> ArgumentPars
     return parser
 
 
-def __to_field_description(default_value=NOT_PROVIDED, field_type=NOT_PROVIDED, description=None):
+def __to_field_description(
+    default_value=NOT_PROVIDED, field_type=NOT_PROVIDED, description=None
+):
     desc = "" if description is None else description
     t = "" if field_type is NOT_PROVIDED else f"type:{field_type}"
     v = "" if default_value is NOT_PROVIDED else f"default:{default_value}"
@@ -147,7 +152,14 @@ def __process_tuple(tuple_one_or_two, long_arg) -> T.Tuple[str, str]:
         return tuple_one_or_two
 
 
-def _add_pydantic_field_to_parser(parser: CustomArgumentParser, field_id: str, field, override_value=..., override_cli: T.Optional[T.Text] = None, prefix="--") -> ArgumentParser:
+def _add_pydantic_field_to_parser(
+    parser: CustomArgumentParser,
+    field_id: str,
+    field,
+    override_value=...,
+    override_cli: T.Optional[T.Text] = None,
+    prefix="--",
+) -> ArgumentParser:
     # field is Field from Pydantic
     description = field.field_info.description
     extra = field.field_info.extra
@@ -163,10 +175,10 @@ def _add_pydantic_field_to_parser(parser: CustomArgumentParser, field_id: str, f
 
     try:
         # cli_custom Should be a tuple2[Str, Str]
-        cli_custom = __process_tuple(extra['extras']['cli'], default_long_arg)
+        cli_custom = __process_tuple(extra["extras"]["cli"], default_long_arg)
     except KeyError:
         if override_cli is None:
-            cli_custom = (default_long_arg, )
+            cli_custom = (default_long_arg,)
         else:
             cli_custom = __process_tuple(override_cli, default_long_arg)
 
@@ -174,12 +186,20 @@ def _add_pydantic_field_to_parser(parser: CustomArgumentParser, field_id: str, f
 
     help_doc = __to_field_description(default_value, field.type_, description)
 
-    parser.add_argument(*cli_custom, help=help_doc, default=default_value, dest=field_id, required=is_required)
+    parser.add_argument(
+        *cli_custom,
+        help=help_doc,
+        default=default_value,
+        dest=field_id,
+        required=is_required,
+    )
 
     return parser
 
 
-def _add_pydantic_class_to_parser(p: CustomArgumentParser, cls: BaseModel, default_overrides: T.Dict[T.Text, T.Any]) -> CustomArgumentParser:
+def _add_pydantic_class_to_parser(
+    p: CustomArgumentParser, cls: BaseModel, default_overrides: T.Dict[T.Text, T.Any]
+) -> CustomArgumentParser:
 
     for ix, field in cls.__fields__.items():
 
@@ -189,17 +209,19 @@ def _add_pydantic_class_to_parser(p: CustomArgumentParser, cls: BaseModel, defau
             default_cli_opts = None
 
         override_value = default_overrides.get(ix, ...)
-        _add_pydantic_field_to_parser(p, ix, field,
-                                      override_value=override_value,
-                                      override_cli=default_cli_opts)
+        _add_pydantic_field_to_parser(
+            p, ix, field, override_value=override_value, override_cli=default_cli_opts
+        )
 
     return p
 
 
-def pydantic_class_to_parser(cls: BaseModel,
-                             description : T.Optional[T.Text] = None,
-                             version : T.Optional[T.Text] = None,
-                             default_value_override=...) -> CustomArgumentParser:
+def pydantic_class_to_parser(
+    cls: BaseModel,
+    description: T.Optional[T.Text] = None,
+    version: T.Optional[T.Text] = None,
+    default_value_override=...,
+) -> CustomArgumentParser:
     """
     Convert a pydantic data model class to an argparse instance
 
@@ -259,13 +281,14 @@ def default_prologue_handler(opts: T.Any) -> T.NoReturn:
     pass
 
 
-def _runner(args: T.List[T.Text],
-            setup_hook: F[[T.List[T.Text]], T.Dict[T.Text, T.Any]],
-            to_parser_with_overrides: F[[T.Dict[T.Text, T.Any]], CustomArgumentParser],
-            exception_handler,
-            prologue_handler,
-            epilogue_handler) -> int:
-
+def _runner(
+    args: T.List[T.Text],
+    setup_hook: F[[T.List[T.Text]], T.Dict[T.Text, T.Any]],
+    to_parser_with_overrides: F[[T.Dict[T.Text, T.Any]], CustomArgumentParser],
+    exception_handler,
+    prologue_handler,
+    epilogue_handler,
+) -> int:
     def now():
         return datetime.datetime.now()
 
@@ -313,14 +336,18 @@ def null_setup_hook(args: T.List[str]) -> T.Dict[T.Text, T.Any]:
 
 
 def _load_json_file(json_path: str) -> T.Dict[T.Text, T.Any]:
-    with open(json_path, 'r') as f:
+    with open(json_path, "r") as f:
         d = json.load(f)
     return d
 
 
-def _parser_add_arg_json_file(p: CustomArgumentParser, key: str) -> CustomArgumentParser:
+def _parser_add_arg_json_file(
+    p: CustomArgumentParser, key: str
+) -> CustomArgumentParser:
     field = f"--{key}"
-    p.add_argument(field, default=None, type=str, help='Path to JSON file', required=False)
+    p.add_argument(
+        field, default=None, type=str, help="Path to JSON file", required=False
+    )
     return p
 
 
@@ -330,7 +357,9 @@ def to_parser_json_file(json_key_name: str) -> CustomArgumentParser:
     return p
 
 
-def setup_hook_to_load_json(args: T.List[str], json_config_field_name: str) -> T.Dict[T.Text, T.Any]:
+def setup_hook_to_load_json(
+    args: T.List[str], json_config_field_name: str
+) -> T.Dict[T.Text, T.Any]:
     # This can't have HelpAction or any other "Eager" action defined
     parser = to_parser_json_file(json_config_field_name)
 
@@ -349,29 +378,34 @@ def setup_hook_to_load_json(args: T.List[str], json_config_field_name: str) -> T
 
 
 def _get_json_config_from_model(cls) -> T.Tuple[bool, str]:
-    enable_json_config: bool = getattr(cls.Config, "CLI_JSON_ENABLE", DefaultConfig.CLI_JSON_ENABLE)
-    json_key_field_name: str = getattr(cls.Config, "CLI_JSON_KEY", DefaultConfig.CLI_JSON_KEY)
+    enable_json_config: bool = getattr(
+        cls.Config, "CLI_JSON_ENABLE", DefaultConfig.CLI_JSON_ENABLE
+    )
+    json_key_field_name: str = getattr(
+        cls.Config, "CLI_JSON_KEY", DefaultConfig.CLI_JSON_KEY
+    )
     return enable_json_config, json_key_field_name
 
 
 def _runner_with_args(
-        args: T.List[T.Text],
-        cls: M,
-        runner_func: F,
-        description: T.Optional[T.Text] = None,
-        version: T.Optional[T.Text] = None,
-        exception_handler=default_exception_handler,
-        prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
-        epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
+    args: T.List[T.Text],
+    cls: M,
+    runner_func: F,
+    description: T.Optional[T.Text] = None,
+    version: T.Optional[T.Text] = None,
+    exception_handler=default_exception_handler,
+    prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
+    epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
 ) -> int:
-
     def to_p(default_override_dict: T.Dict[T.Text, T.Any]) -> CustomArgumentParser:
         # Raw errors at the argparse level aren't always
         # communicated in an obvious way at this level
-        parser = pydantic_class_to_parser(cls,
-                                          description=description,
-                                          version=version,
-                                          default_value_override=default_override_dict)
+        parser = pydantic_class_to_parser(
+            cls,
+            description=description,
+            version=version,
+            default_value_override=default_override_dict,
+        )
 
         # this is a bit of hackery
         parser.set_defaults(func=runner_func, cls=cls)
@@ -379,24 +413,27 @@ def _runner_with_args(
 
     enable_json_config, json_key_field_name = _get_json_config_from_model(cls)
     if enable_json_config:
+
         def __setup(args_):
             return setup_hook_to_load_json(args_, json_key_field_name)
+
     else:
         __setup = null_setup_hook
 
-    return _runner(args, __setup, to_p, exception_handler, prologue_handler, epilogue_handler)
+    return _runner(
+        args, __setup, to_p, exception_handler, prologue_handler, epilogue_handler
+    )
 
 
 def to_runner(
-        cls: M,
-        runner_func: F,
-        description: T.Optional[T.Text] = None,
-        version: T.Optional[T.Text] = None,
-        exception_handler=default_exception_handler,
-        prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
-        epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
+    cls: M,
+    runner_func: F,
+    description: T.Optional[T.Text] = None,
+    version: T.Optional[T.Text] = None,
+    exception_handler=default_exception_handler,
+    prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
+    epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
 ) -> F[[T.List[T.Text]], int]:
-
     def f(args: T.List[T.Text]) -> int:
         return _runner_with_args(
             args,
@@ -420,7 +457,8 @@ def run_and_exit(
     exception_handler=default_exception_handler,
     prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
     epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
-    args: T.Optional[T.List[T.Text]] = None) -> T.NoReturn:
+    args: T.Optional[T.List[T.Text]] = None,
+) -> T.NoReturn:
 
     _args: T.List[T.Text] = sys.argv[1:] if args is None else args
 
@@ -437,15 +475,21 @@ def run_and_exit(
     )
 
 
-def to_subparser(models: T.Dict[T.Text, SubParser],
-                 description: T.Optional[T.Text] = None,
-                 version: T.Optional[T.Text] = None,
-                 overrides: T.Optional[T.Dict[T.Text, T.Any]] = None) -> ArgumentParser:
+def to_subparser(
+    models: T.Dict[T.Text, SubParser],
+    description: T.Optional[T.Text] = None,
+    version: T.Optional[T.Text] = None,
+    overrides: T.Optional[T.Dict[T.Text, T.Any]] = None,
+) -> ArgumentParser:
 
-    p = ArgumentParser(description=description, formatter_class=ArgumentDefaultsHelpFormatter)
+    p = ArgumentParser(
+        description=description, formatter_class=ArgumentDefaultsHelpFormatter
+    )
 
     # log.debug(f"Creating parser from models {models}")
-    sp = p.add_subparsers(dest='commands', help="Subparser Commands", parser_class=CustomArgumentParser)
+    sp = p.add_subparsers(
+        dest="commands", help="Subparser Commands", parser_class=CustomArgumentParser
+    )
 
     # This fixes an unexpected case where the help isn't called?
     # is this a Py2 to Py3 change?
@@ -458,8 +502,12 @@ def to_subparser(models: T.Dict[T.Text, SubParser],
         # I believe mypy is confused by return type
         spx = sp.add_parser(subparser_id, help=sbm.description, add_help=False)
 
-        _add_pydantic_class_to_parser(spx, sbm.model_class, default_overrides=overrides_defaults)
-        enable_json_key, json_key_field_name = _get_json_config_from_model(sbm.model_class)
+        _add_pydantic_class_to_parser(
+            spx, sbm.model_class, default_overrides=overrides_defaults
+        )
+        enable_json_key, json_key_field_name = _get_json_config_from_model(
+            sbm.model_class
+        )
 
         if enable_json_key:
             _parser_add_arg_json_file(spx, json_key_field_name)
@@ -474,12 +522,14 @@ def to_subparser(models: T.Dict[T.Text, SubParser],
     return p
 
 
-def to_runner_sp(subparsers: T.Dict[T.Text, SubParser],
-                 description: T.Optional[T.Text] = None,
-                 version: T.Optional[T.Text] = None,
-                 exception_handler: F[[BaseException], int] = default_exception_handler,
-                 prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
-                 epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler) -> F[[T.List[T.Text]], int]:
+def to_runner_sp(
+    subparsers: T.Dict[T.Text, SubParser],
+    description: T.Optional[T.Text] = None,
+    version: T.Optional[T.Text] = None,
+    exception_handler: F[[BaseException], int] = default_exception_handler,
+    prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
+    epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
+) -> F[[T.List[T.Text]], int]:
 
     # This is a bit messy. The design calling _runner requires a single setup hook.
     # in principle, there can be different json key names for each subparser
@@ -490,31 +540,48 @@ def to_runner_sp(subparsers: T.Dict[T.Text, SubParser],
         enable_json, json_key_name = _get_json_config_from_model(sbm.model_class)
 
         if enable_json:
+
             def _setup_hook(args: T.List[T.Text]) -> T.Dict[T.Text, T.Any]:
                 return setup_hook_to_load_json(args, json_key_name)
+
         else:
             _setup_hook = null_setup_hook
 
     def _to_parser(overrides: T.Dict[T.Text, T.Any]) -> CustomArgumentParser:
-        return to_subparser(subparsers, description=description, version=version, overrides=overrides)
+        return to_subparser(
+            subparsers, description=description, version=version, overrides=overrides
+        )
 
     def f(args: T.List[T.Text]) -> int:
-        return _runner(args, _setup_hook, _to_parser, exception_handler, prologue_handler, epilogue_handler)
+        return _runner(
+            args,
+            _setup_hook,
+            _to_parser,
+            exception_handler,
+            prologue_handler,
+            epilogue_handler,
+        )
 
     return f
 
 
-def run_sp_and_exit(subparsers: T.Dict[T.Text, SubParser],
-                    description: T.Optional[T.Text] = None,
-                    version: T.Optional[T.Text] = None,
-                    exception_handler: F[[BaseException], int] = default_exception_handler,
-                    prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
-                    epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
-                    args=sys.argv[1:]) -> T.NoReturn:
+def run_sp_and_exit(
+    subparsers: T.Dict[T.Text, SubParser],
+    description: T.Optional[T.Text] = None,
+    version: T.Optional[T.Text] = None,
+    exception_handler: F[[BaseException], int] = default_exception_handler,
+    prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
+    epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
+    args=sys.argv[1:],
+) -> T.NoReturn:
 
-    f = to_runner_sp(subparsers, description=description, version=version,
-                     exception_handler=exception_handler,
-                     prologue_handler=prologue_handler,
-                     epilogue_handler=epilogue_handler)
+    f = to_runner_sp(
+        subparsers,
+        description=description,
+        version=version,
+        exception_handler=exception_handler,
+        prologue_handler=prologue_handler,
+        epilogue_handler=epilogue_handler,
+    )
 
     sys.exit(f(args))
