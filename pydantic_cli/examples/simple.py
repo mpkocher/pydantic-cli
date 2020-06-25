@@ -1,7 +1,12 @@
 """
-Simple Example of using Pydantic to generate a CLI
+# Simple Example of using Pydantic to generate a CLI
 
-This example will generate a CLI tool with 2 (required) positional arguments
+This example will generate a CLI tool with 2 **required** arguments
+and can be called
+
+```bash
+my-tool --input_file file.fasta --max_records 10
+```
 """
 from pydantic import BaseModel
 

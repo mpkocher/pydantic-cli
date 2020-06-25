@@ -1,26 +1,31 @@
 """
-Example using Pydantic-CLI to generate a custom CLI fields on a per field basis
-and setting up logging using the `prologue_handler`.
 
-The `prologue_handler` provides a general mechanism to call
-a setup hook with an instance of the Pydantic data model as the
-argument to the function.
+Demonstrate a few key features of pydantic-cli
+
+1. Leverage Python Enum within Pydantic Data models
+2. Hooks: Add a pre-exec hook (prologue_handler) that can be used to setup logging
+3. Hooks: Add a post-exec hook (epilogue_handler) that can be used to write a custom summary of the
+output of the CLI tool
+
+
+In this example, the `prologue_handler` sets up the application logging using logging.basicConfig
+and the `epilogue_handler` will log the runtime and the exit code after the main execution function
+is called.
 """
 import sys
-import typing as T
 import logging
 
 from pydantic import BaseModel
 
 from pydantic_cli import __version__
-from pydantic_cli import run_and_exit
+from pydantic_cli import run_and_exit, DefaultConfig
 from pydantic_cli.examples import ExampleConfigDefaults, LogLevel
 
 log = logging.getLogger(__name__)
 
 
 class Options(BaseModel):
-    class Config(ExampleConfigDefaults):
+    class Config(DefaultConfig, ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {
             "max_records": ("-m",),
             "log_level": ("-l",),
@@ -62,7 +67,7 @@ if __name__ == "__main__":
     run_and_exit(
         Options,
         example_runner,
-        description="Description",
+        description=__doc__,
         version="0.1.0",
         prologue_handler=prologue_handler,
         epilogue_handler=epilogue_handler,

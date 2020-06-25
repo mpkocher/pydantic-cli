@@ -1,12 +1,20 @@
 """
 Example of Using a Subparser
+
+Demonstration of using two Pydantic data models to
+build a subparser.
+
+For example,
+
+my-tool alpha --help
+my-tool beta --help
 """
 import sys
 import logging
 import typing as T
 from pydantic import BaseModel, AnyUrl
 
-from pydantic_cli.examples import ExampleConfigDefaults, LogLevel
+from pydantic_cli.examples import ExampleConfigDefaults, LogLevel, prologue_handler
 from pydantic_cli import run_sp_and_exit, SubParser, DefaultConfig
 
 log = logging.getLogger(__name__)
@@ -26,7 +34,7 @@ class AlphaOptions(BaseModel):
 
 
 class BetaOptions(BaseModel):
-    class Config(ExampleConfigDefaults):
+    class Config(DefaultConfig, ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {
             "url": ("-u", "--url"),
             "num_retries": ("-n", "--num-retries"),
@@ -39,24 +47,9 @@ class BetaOptions(BaseModel):
     log_level: LogLevel = LogLevel.INFO
 
 
-def prologue_handler(opts):
-    """Define a general Prologue hook to setup logging for the application"""
-    format_str = (
-        "[%(levelname)s] %(asctime)s [%(name)s %(funcName)s %(lineno)d] %(message)s"
-    )
-    logging.basicConfig(
-        level=opts.log_level.upper(), stream=sys.stdout, format=format_str
-    )
-    log.info(f"Set up log with level {opts.log_level} with opts:{opts}")
-    log.debug(f"Running {__file__}")
+def to_func(sx):
+    """ Util func to create to custom mocked funcs that be used be each subparser"""
 
-
-def printer_runner(opts: T.Any):
-    print(f"Mock example running with {opts}")
-    return 0
-
-
-def to_runner(sx):
     def example_runner(opts) -> int:
         print(f"Mock {sx} example running with {opts}")
         return 0
@@ -65,10 +58,13 @@ def to_runner(sx):
 
 
 def to_subparser_example():
+    """Simply create a dict of SubParser and pass the dict
+    to `run_sp_and_exit` or `to_runner_sp`
+    """
 
     return {
-        "alpha": SubParser(AlphaOptions, to_runner("Alpha"), "Alpha SP Description"),
-        "beta": SubParser(BetaOptions, to_runner("Beta"), "Beta SP Description"),
+        "alpha": SubParser(AlphaOptions, to_func("Alpha"), "Alpha SP Description"),
+        "beta": SubParser(BetaOptions, to_func("Beta"), "Beta SP Description"),
     }
 
 
