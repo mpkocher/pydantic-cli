@@ -4,6 +4,12 @@ Turn Pydantic defined Data Models into CLI Tools and enable loading values from 
 
 **Requires Pydantic** `>=1.5.1`. 
 
+## Installation
+
+```bash
+pip install pydantic-cli
+```
+
 ## Features and Requirements
 
 1. Thin Schema driven interfaces constructed from [Pydantic](https://github.com/samuelcolvin/pydantic) defined data models
