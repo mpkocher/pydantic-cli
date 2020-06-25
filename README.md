@@ -1,25 +1,26 @@
 # Pydantic Commandline Tool Interface
 
-Turn Pydantic defined Data Models into CLI Tools!
+Turn Pydantic defined Data Models into CLI Tools and enable loading values from JSON files
 
 **Requires Pydantic** `>=1.5.1`. 
 
-## Features
+## Features and Requirements
 
-1. Schema driven interfaces built on top of [Pydantic](https://github.com/samuelcolvin/pydantic) data models
-2. Validation is performed in a single location as defined by Pydantic's validation model
+1. Thin Schema driven interfaces constructed from [Pydantic](https://github.com/samuelcolvin/pydantic) defined data models
+2. Validation is performed in a single location as defined by Pydantic's validation model and defined types
 3. CLI parsing is only structurally validating that the args or optional arguments are provided
-4. Clear interface between the CLI and your application code
-5. Easy to test (due to reasons defined above)
+4. Enable loading config defined in JSON to override or set specific values
+5. Clear interface between the CLI and your application code  
+6. Easy to test (due to reasons defined above)
 
 
 ## Quick Start
 
 
-To create a commandline tool that takes an input file and max number of records to process as positional arguments:
+To create a commandline tool that takes an input file and max number of records to process as arguments:
 
 ```bash
-my-tool /path/to/file.txt 1234
+my-tool --input_file /path/to/file.txt --max_records 1234
 ```
 
 This requires two components.
@@ -60,53 +61,85 @@ if __name__ == '__main__':
 
 ```
 
-If the data model has default values, the commandline argument with be optional and the CLI arg will be prefixed with `--'.
-
-For example:
-
-```python
-from pydantic import BaseModel
-from pydantic_cli import run_and_exit
-
-class MinOptions(BaseModel):
-    input_file: str
-    max_records: int = 10
-
-    
-def example_runner(opts: MinOptions) -> int:
-    print(f"Mock example running with options {opts}")
-    return 0
-    
-    
-if __name__ == '__main__':
-    run_and_exit(MinOptions, example_runner, description="My Tool Description", version='0.1.0')
-
-```
-
-Will create a tool with `my-tool /path/to/input.txt --max_records 1234`
-
-```bash
-my-tool /path/to/input.txt --max_records 1234
-```
-
-with `--max_records` being optional to the commandline interface.
-
-
 **WARNING**: Boolean values must be communicated explicitly (e.g., `--run_training True`). This explicitness is chosen to avoid confusion with auto-generated option flags (`--is-run_training` or `--no-run_training`) that do not directly map to the core Pydantic data model.
 
 
-The `--help` is quite minimal (due to the lack of metadata), however, verbosely named arguments can often be good enough to communicate the intent of the commandline interface.
+## Loading Configuration using JSON
+
+Tools can also load entire models or partially defined Pydantic data models from JSON files.
+
+
+For example, given the following Pydantic data model:
+
+```
+from pydantic import BaseModel, DefaultConfig
+from pydantic_cli import run_and_exit
+
+class Opts(BaseModel):
+    class Config(DefaultConfig):
+        CLI_JSON_ENABLE = True
+    
+    hdf_file: str
+    max_records: int = 10
+    min_filter_score: float
+    alpha: float
+    beta: float
+
+def runner(opts: Opts):
+    print(f"Running with opts:{opts}")
+    return 0
+
+if __name__ == '__main__':
+    run_and_exit(Opts, runner, description="My Tool Description", version='0.1.0')
+
+```
+
+Can be run with a JSON file that defines all the (required) values. 
+
+```json
+{"hdf_file": "/path/to/file.hdf5", max_records: 5, min_filter_score: 1.5, alpha: 1.0, beta: 1.0}
+```
+
+The tool can be executed as shown below. Note, options required at the commandline as defined in the `Opts` model (e.g., 'hdf_file', 'min_filter_score', 'alpha' and 'beta') are NO longer required values supplied to the commandline tool.
+```bash
+my-tool --json-config /path/to/file.json
+```
+
+To override values in the JSON config file, or provide the missing required values, simply provide the values at the commandline.
+
+These values **will override** values defined in the JSON config file. The provides a general mechanism of using configuration "preset" files. 
+
+```bash
+my-tool --json-config /path/to/file.json --alpha -1.8 --max_records 100 
+```
+
+Similarly, a partially described data model can be used combined with explict values provided at the commandline.
+
+In this example, `hdf_file` and `min_filter_score` are still required values that need to be provided to the commandline tool.
+
+```json
+{"max_records":10, "alpha":1.234, "beta":9.876}
+``` 
+
+```bash
+my-tool --json-config /path/to/file.json --hdf_file /path/to/file.hdf5 --min_filter_score -12.34
+```
+
+
+## Customization and Hooks
+
+If the `description` is not defined and the Pydantic data model fields are tersely named (e.g., 'total', or 'n'), this can yield a call to `--help` that is quite minimal (due to the lack of metadata). However, verbosely named arguments can often be good enough to communicate the intent of the commandline interface.
 
 
 For customization of the CLI args, such as max number of records is `-m 1234` in the above example, there are two approaches.
 
-- The first is the "quick" method that is a minor change to the `Config` of the Pydantic Data model. 
-- The second "Field" method is to define the metadata in the [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) 
+- The first is the **quick** method that is a minor change to the core `Config` of the Pydantic Data model. 
+- The second method is use Pydantic's "Field" metadata model is to define richer set of metadata. See [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) more details. 
 
 
-### Quick Model for Customization
+### Customization using Quick Model
 
-We're going to change the usage from `my-tool /path/to/file.txt 1234` to `my-tool /path/to/file.txt -m 1234` .
+We're going to change the usage from `my-tool --input_file /path/to/file.txt --max_records 1234` to `my-tool -i /path/to/file.txt -m 1234` using the "quick" method by customizing the Pydantic data model "Config".
 
 This only requires adding  `CLI_EXTRA_OPTIONS` to the Pydantic `Config`.
 
@@ -116,14 +149,14 @@ from pydantic import BaseModel
 class MinOptions(BaseModel):
 
     class Config:
-        CLI_EXTRA_OPTIONS = {'max_records': ('-m', )}
+        CLI_EXTRA_OPTIONS = {'input_file': ('-i,), 'max_records': ('-m', ) }
 
     input_file: str
     max_records: int = 10
 
 ```
 
-You can also override the "long" argument. However, **note this is starting to add a new layer of indirection** on top of the Field. (e.g., 'max_records' to '--max-records') that may or may not be useful.
+You can also override the "long" argument. However, **note this is starting to add a new layer of indirection** on top of the fields defined in the Pydantic model. For example, 'max_records' maps to '--max-records' at the commandline interface and perhaps might create annoying inconsistencies.
 
 
 ```python
@@ -132,7 +165,7 @@ from pydantic import BaseModel
 class MinOptions(BaseModel):
 
     class Config:
-        CLI_EXTRA_OPTIONS = {'max_records': ('-m', '--max-records')}
+        CLI_EXTRA_OPTIONS = {'input_file': ('-i, '), 'max_records': ('-m', '--max-records')}
 
     input_file: str
     max_records: int = 10
@@ -140,7 +173,7 @@ class MinOptions(BaseModel):
 ```
 
 
-### Schema Driven Approach using Pydantic Field
+### Customization using Quick Model using Schema Driven Approach using Pydantic Field
 
 
 ```python
@@ -171,8 +204,12 @@ class Options(BaseModel):
 
 ```
 
+This will metadata (e.g., title, description) will be communicated in the `--help` of the commandline tool.
+
 
 ## Hooks into the CLI Execution
+
+There are three core hooks into the customization of CLI execution. 
 
 - exception handler (log or write to stderr and map specific exception classes to integer exit codes)
 - prologue handler (pre-execution hook)
@@ -250,13 +287,13 @@ from pydantic import BaseModel, AnyUrl
 
 
 
-from pydantic_cli.examples import ConfigDefaults
+from pydantic_cli.examples import ExampleConfigDefaults
 from pydantic_cli import run_sp_and_exit, SubParser
 
 
 class AlphaOptions(BaseModel):
 
-    class Config(ConfigDefaults):
+    class Config(ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {'max_records': ('-m', '--max-records')}
 
     input_file: str
@@ -265,7 +302,7 @@ class AlphaOptions(BaseModel):
 
 class BetaOptions(BaseModel):
 
-    class Config(ConfigDefaults):
+    class Config(ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {'url': ('-u', '--url'),
                              'num_retries': ('-n', '--num-retries')}
 
@@ -309,6 +346,6 @@ if __name__ == "__main__":
 
 ### To Improve
 
-- Better type descriptions in help
-- Better communication of required "options" in help
-- Add load from JSON file
+- Better type descriptions in `--help`
+- Better support for boolean values to avoid having `--run_training True` and have more natural CLI arg style, such as `--run_training` and `--no_run_training`.
+- Better error messages
