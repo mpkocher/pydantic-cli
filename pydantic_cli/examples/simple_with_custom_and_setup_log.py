@@ -7,32 +7,24 @@ a setup hook with an instance of the Pydantic data model as the
 argument to the function.
 """
 import sys
-from enum import Enum
+import typing as T
 import logging
 
 from pydantic import BaseModel
 
 from pydantic_cli import __version__
 from pydantic_cli import run_and_exit
-from pydantic_cli.examples import ConfigDefaults
+from pydantic_cli.examples import ExampleConfigDefaults, LogLevel
 
 log = logging.getLogger(__name__)
 
 
-class LogLevel(str, Enum):
-    # wish this was defined in the stdlib's logging as an enum
-    INFO = "INFO"
-    DEBUG = "DEBUG"
-    WARN = "WARN"
-    ERROR = "ERROR"
-    CRITICAL = "CRITICAL"
-
-
 class Options(BaseModel):
 
-    class Config(ConfigDefaults):
+    class Config(ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {'max_records': ('-m', ),
-                             'log_level': ('-l', )}
+                             'log_level': ('-l', ),
+                             'input_file': ('-i', )}
 
     input_file: str
     max_records: int = 10
@@ -48,7 +40,7 @@ def prologue_handler(opts: Options):
     log.info(f"Running {__file__}")
 
 
-def epilogue_handler(exit_code: int, run_time_sec: float) -> None:
+def epilogue_handler(exit_code: int, run_time_sec: float):
     log.info(f"Completed running {__file__} with exit code {exit_code} in {run_time_sec} sec.")
 
 

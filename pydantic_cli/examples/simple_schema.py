@@ -3,13 +3,13 @@
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from pydantic_cli.examples import ConfigDefaults
+from pydantic_cli.examples import ExampleConfigDefaults
 from pydantic_cli import run_and_exit
 
 
 class Options(BaseModel):
 
-    class Config(ConfigDefaults):
+    class Config(ExampleConfigDefaults):
         pass
 
     input_file: str = Field(
