@@ -574,7 +574,7 @@ def run_sp_and_exit(
     exception_handler: F[[BaseException], int] = default_exception_handler,
     prologue_handler: F[[T.Any], T.NoReturn] = default_prologue_handler,
     epilogue_handler: F[[int, float], T.NoReturn] = default_epilogue_handler,
-    args=sys.argv[1:],
+    args: T.Optional[T.List[T.Text]] = None,
 ) -> T.NoReturn:
 
     f = to_runner_sp(
@@ -586,4 +586,5 @@ def run_sp_and_exit(
         epilogue_handler=epilogue_handler,
     )
 
-    sys.exit(f(args))
+    _args: T.List[T.Text] = sys.argv[1:] if args is None else args
+    sys.exit(f(_args))
