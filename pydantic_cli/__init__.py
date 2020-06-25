@@ -35,6 +35,10 @@ class DefaultConfig:
     CLI_JSON_KEY: str = "json-config"
     # Enable JSON config loading
     CLI_JSON_ENABLE: bool = False
+    # Can be used to override custom fields
+    # e.g., {"max_records": ('-m', '--max-records')}
+    # or {"max_records": ('-m', )}
+    CLI_EXTRA_OPTIONS = {}
 
 
 class TerminalEagerCommand(Exception):

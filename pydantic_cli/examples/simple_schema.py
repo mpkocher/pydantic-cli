@@ -1,4 +1,9 @@
-"""Example of using pydantic_cli leveraging the Pydantic Field
+"""
+Example of using pydantic_cli leveraging the Pydantic Field to add rich metadata
+that will be communicated in the output of `--help`.
+
+Note, that this leverages Pydantic's underlying validation mechanism. For example,
+`max_records` must be > 0.
 """
 from typing import Optional
 from pydantic import BaseModel, Field
