@@ -71,9 +71,9 @@ Tools can also load entire models or partially defined Pydantic data models from
 
 For example, given the following Pydantic data model:
 
-```
-from pydantic import BaseModel, DefaultConfig
-from pydantic_cli import run_and_exit
+```python
+from pydantic import BaseModel
+from pydantic_cli import run_and_exit, DefaultConfig
 
 class Opts(BaseModel):
     class Config(DefaultConfig):
