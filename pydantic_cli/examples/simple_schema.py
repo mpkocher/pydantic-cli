@@ -8,7 +8,6 @@ from pydantic_cli import run_and_exit
 
 
 class Options(BaseModel):
-
     class Config(ExampleConfigDefaults):
         pass
 
@@ -17,7 +16,7 @@ class Options(BaseModel):
         title="Input File",
         description="Path to the input file",
         # required=True, # this is implicitly set by ...
-        extras={'cli': ("-f", "--input-file")}
+        extras={"cli": ("-f", "--input-file")},
     )
 
     max_records: int = Field(
@@ -25,14 +24,14 @@ class Options(BaseModel):
         title="Max Records",
         description="Max number of records",
         gt=0,
-        extras={'cli': ('-m', )},
+        extras={"cli": ("-m",)},
     )
 
     min_filter_score: float = Field(
         ...,
         title="Min Score",
         description="Minimum Score Filter that will be applied to the records",
-        extras={'cli': ('-s', )},
+        extras={"cli": ("-s",)},
         gt=0
         # or extras={'cli': ('-s', '--min-filter-score', )}
     )
@@ -42,7 +41,7 @@ class Options(BaseModel):
         title="Max Score",
         description="Maximum Score Filter that will be applied to the records",
         gt=0,
-        extras={'cli': ('-S', )}
+        extras={"cli": ("-S",)}
         # or extras={'cli': ('-S', '--min-filter-score', )}
     )
 
@@ -56,4 +55,4 @@ def example_runner(opts: Options) -> int:
 
 
 if __name__ == "__main__":
-    run_and_exit(Options, example_runner, description=__doc__, version='0.1.0')
+    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")

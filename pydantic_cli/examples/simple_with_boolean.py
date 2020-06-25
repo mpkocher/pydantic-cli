@@ -19,4 +19,4 @@ def example_runner(opts: Options) -> int:
 
 
 if __name__ == "__main__":
-    run_and_exit(Options, example_runner, description=__doc__, version='0.1.0')
+    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")

@@ -12,3 +12,6 @@ deploy:
 
 mypy:
 	mypy pydantic_cli
+
+format:
+	black pydantic_cli

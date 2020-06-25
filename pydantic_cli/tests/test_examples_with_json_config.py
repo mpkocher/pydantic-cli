@@ -18,18 +18,16 @@ class TestExample(_TestUtil):
             self.run_config(args)
 
     def test_simple_json(self):
-        opt = Opts(hdf_file="/path/to/file.hdf5",
-                   max_records=12,
-                   min_filter_score=1.024,
-                   alpha=1.234,
-                   beta=9.854)
+        opt = Opts(
+            hdf_file="/path/to/file.hdf5",
+            max_records=12,
+            min_filter_score=1.024,
+            alpha=1.234,
+            beta=9.854,
+        )
         self._util(opt.dict(), [])
 
     def test_simple_partial_json(self):
-        d = dict(
-                   max_records=12,
-                   min_filter_score=1.024,
-                   alpha=1.234,
-                   beta=9.854)
+        d = dict(max_records=12, min_filter_score=1.024, alpha=1.234, beta=9.854)
 
-        self._util(d, ['--hdf_file', "/path/to/file.hdf5"])
+        self._util(d, ["--hdf_file", "/path/to/file.hdf5"])
