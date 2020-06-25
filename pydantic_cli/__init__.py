@@ -7,6 +7,7 @@ import logging
 import typing as T
 from typing import Callable as F
 
+from ._version import __version__
 
 from pydantic import BaseModel
 
@@ -16,9 +17,6 @@ log = logging.getLogger(__name__)
 
 NOT_PROVIDED = ...
 
-VERSION = (2, 0, 0)
-
-__version__ = ".".join([str(i) for i in VERSION])
 
 __all__ = [
     "to_runner",

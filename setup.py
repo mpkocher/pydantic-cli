@@ -1,8 +1,6 @@
 import os
 from setuptools import setup
 
-version = __import__('pydantic_cli').__version__
-
 
 def _get_local_file(file_name):
     return os.path.join(os.path.dirname(__file__), file_name)
@@ -13,8 +11,27 @@ def _read(file_name):
         return f.read()
 
 
+def _get_requirements(file_name):
+    with open(file_name, 'r') as f:
+        reqs = [line for line in f if not line.startswith("#")]
+    return reqs
+
+
+def get_version():
+    p = _get_local_file(os.path.join("pydantic_cli", "_version.py"))
+    matcher = "__version__"
+
+    with open(p) as f:
+        for line in f:
+            if matcher in line:
+                version = line.split("=")[1].strip()
+                return version
+
+    raise ValueError(f"Unable to find version {matcher} in file={p}")
+
+
 setup(name='pydantic_cli',
-      version=version,
+      version=get_version(),
       description='Turn Pydantic defined Data Models into CLI Tools',
       long_description=_read('README.md'),
       long_description_content_type="text/markdown",
@@ -22,6 +39,7 @@ setup(name='pydantic_cli',
       author='M. Kocher',
       author_email='michael.kocher@me.com',
       license='MIT',
+      install_requires=_get_requirements("REQUIREMENTS.txt"),
       packages=['pydantic_cli', 'pydantic_cli.examples'],
       tests_require = ['nose'],
       zip_safe=False,
