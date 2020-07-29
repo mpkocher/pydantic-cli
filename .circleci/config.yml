@@ -50,9 +50,6 @@ jobs:
           command: |
             . venv/bin/activate
             nosetests .
-          name: run mypy
-          command: |
-            . venv/bin/activate
             mypy pydantic_cli
 
       - store_artifacts:
