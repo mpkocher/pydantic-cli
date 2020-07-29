@@ -13,11 +13,12 @@ pip install pydantic-cli
 ## Features and Requirements
 
 1. Thin Schema driven interfaces constructed from [Pydantic](https://github.com/samuelcolvin/pydantic) defined data models
-2. Validation is performed in a single location as defined by Pydantic's validation model and defined types
-3. CLI parsing is only structurally validating that the args or optional arguments are provided
-4. Enable loading config defined in JSON to override or set specific values
-5. Clear interface between the CLI and your application code  
-6. Easy to test (due to reasons defined above)
+1. Validation is performed in a single location as defined by Pydantic's validation model and defined types
+1. CLI parsing is only structurally validating that the args or optional arguments are provided
+1. Enable loading config defined in JSON to override or set specific values
+1. Clear interface between the CLI and your application code
+1. Leverage the static analyzing tool [**mypy**](http://mypy.readthedocs.io) to catch type errors in your commandline tool   
+1. Easy to test (due to reasons defined above)
 
 
 ## Quick Start
@@ -129,6 +130,94 @@ In this example, `hdf_file` and `min_filter_score` are still required values tha
 
 ```bash
 my-tool --json-config /path/to/file.json --hdf_file /path/to/file.hdf5 --min_filter_score -12.34
+```
+
+## Catching Type Errors with mypy
+
+If you've used `argparse`, you've probably been bitten by an `AttributeError` exception raised on the Namespace instance returned from parsing the raw args.
+
+For example,
+
+```python
+import sys
+from argparse import ArgumentParser
+
+
+def to_parser() -> ArgumentParser:
+    p = ArgumentParser(description="Example")
+    f = p.add_argument
+
+    f('hdf5_file', type=str, help="Path to HDF5 records")
+    f("--num_records", required=True, type=int, help="Number of records to filter over")
+    f('-f', '-filter-score', required=True, type=float, default=1.234, help="Min filter score")
+    f('-g', '--enable-gamma-filter', action="store_true", help="Enable gamma filtering")
+    return p
+
+
+def my_library_code(path: str, num_records: float, min_filter_score, enable_gamma=True) -> int:
+    print("Mock running of code")
+    return 0
+
+
+def main(argv) -> int:
+    p = to_parser()
+    pargs = p.parse_args(argv)
+    return my_library_code(pargs.hdf5_file, pargs.num_record, pargs.min_filter_score, pargs.enable_gamma_filter)
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))
+
+```
+
+The first error found at runtime is show below. 
+
+```bash
+Traceback (most recent call last):
+  File "junk.py", line 35, in <module>
+    sys.exit(main(sys.argv[1:]))
+  File "junk.py", line 31, in main
+    return my_library_code(pargs.hdf5_file, pargs.num_record, pargs.min_filter_score, pargs.enable_gamma_filter)
+AttributeError: 'Namespace' object has no attribute 'num_record'
+```
+
+The errors in `pargs.num_records` and `pargs.filter_score` are inconsistent with what is defined in `to_parser` method. Each error will have to be manually hunted down.
+
+With `pydantic-cli`, it's possible to catch these errors by running `mypy`. This also enables you to refactor your code with more confidence.
+
+For example,
+
+```python
+from pydantic import BaseModel
+
+from pydantic_cli import run_and_exit
+
+
+class Options(BaseModel):
+    input_file: str
+    max_records: int
+
+
+def bad_func(n: int) -> int:
+    return 2 * n
+
+
+def example_runner(opts: Options) -> int:
+    print(f"Mock example running with {opts}")
+    return 0
+
+
+if __name__ == "__main__":
+    run_and_exit(Options, bad_func, version="0.1.0")
+```
+
+With `mypy`, it's possible to proactively catch this types of errors. 
+
+```bash
+ mypy pydantic_cli/examples/simple.py                                                                                                                                                                  ✘ 1 
+pydantic_cli/examples/simple.py:36: error: Argument 2 to "run_and_exit" has incompatible type "Callable[[int], int]"; expected "Callable[[Options], int]"
+Found 1 error in 1 file (checked 1 source file)
+
 ```
 
 
