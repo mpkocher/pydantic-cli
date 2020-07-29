@@ -1,13 +1,13 @@
-from . import _TestUtil, TestConfig
+from . import _TestHarness, TestConfig
 
 import json
 from tempfile import NamedTemporaryFile
 from pydantic_cli.examples.simple_with_json_config import Opts, runner
 
 
-class TestExample(_TestUtil):
+class TestExample(_TestHarness[Opts]):
 
-    CONFIG = TestConfig(model=Opts, runner=runner)
+    CONFIG = TestConfig(Opts, runner)
 
     def _util(self, d, more_args):
         with NamedTemporaryFile(mode="w", delete=True) as f:

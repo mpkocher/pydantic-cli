@@ -7,9 +7,9 @@ log = logging.getLogger(__name__)
 
 
 class ExampleConfigDefaults:
-    # validate_all = True
-    # validate_assignment = False
-    allow_mutation = False
+    # validate_all: bool = True
+    # validate_assignment: bool = False
+    allow_mutation: bool = False
 
 
 class LogLevel(str, Enum):
@@ -21,7 +21,7 @@ class LogLevel(str, Enum):
     CRITICAL = "CRITICAL"
 
 
-def prologue_handler(opts) -> T.NoReturn:
+def prologue_handler(opts) -> None:
     """Define a general Prologue hook to setup logging for the application"""
     format_str = (
         "[%(levelname)s] %(asctime)s [%(name)s %(funcName)s %(lineno)d] %(message)s"
@@ -30,7 +30,7 @@ def prologue_handler(opts) -> T.NoReturn:
     log.info(f"Running {__file__} with {opts}")
 
 
-def epilogue_handler(exit_code: int, run_time_sec: float) -> T.NoReturn:
+def epilogue_handler(exit_code: int, run_time_sec: float) -> None:
     log.info(
         f"Completed running {__file__} with exit code {exit_code} in {run_time_sec} sec."
     )

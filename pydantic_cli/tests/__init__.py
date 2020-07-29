@@ -1,24 +1,37 @@
 import unittest
-from typing import Callable, NamedTuple, TypeVar
+from typing import NamedTuple, TypeVar, Generic, Type, Any
+from typing import Callable as F
 
 
 from pydantic import BaseModel
 
-from pydantic_cli import to_runner, default_prologue_handler, default_epilogue_handler
+from pydantic_cli import (
+    to_runner,
+    default_prologue_handler,
+    default_epilogue_handler,
+    PrologueHandlerType,
+    EpilogueHandlerType,
+)
 
 M = TypeVar("M", bound=BaseModel)
 
 
-class TestConfig(NamedTuple):
-    model: M
-    runner: Callable
-    prologue: Callable = default_prologue_handler
-    epilogue: Callable = default_epilogue_handler
+class TestConfig(Generic[M]):
+    def __init__(
+        self,
+        model_class: Type[M],
+        runner_func: F[[M], int],
+        prologue: PrologueHandlerType = default_prologue_handler,
+        epilogue: EpilogueHandlerType = default_epilogue_handler,
+    ):
+        self.model = model_class
+        self.runner = runner_func
+        self.prologue = prologue
+        self.epilogue = epilogue
 
 
-class _TestUtil(unittest.TestCase):
-
-    CONFIG: TestConfig = None
+class _TestHarness(Generic[M], unittest.TestCase):
+    CONFIG: TestConfig[M]
 
     def run_config(self, args, exit_code=0):
         f = to_runner(

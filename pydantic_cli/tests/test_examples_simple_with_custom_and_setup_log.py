@@ -4,15 +4,12 @@ from pydantic_cli.examples.simple_with_custom_and_setup_log import (
     epilogue_handler,
     prologue_handler,
 )
-from . import _TestUtil, TestConfig
+from . import _TestHarness, TestConfig
 
 
-class TestExamples(_TestUtil):
+class TestExamples(_TestHarness[Options]):
     CONFIG = TestConfig(
-        model=Options,
-        runner=example_runner,
-        epilogue=epilogue_handler,
-        prologue=prologue_handler,
+        Options, example_runner, epilogue=epilogue_handler, prologue=prologue_handler,
     )
 
     def test_simple_01(self):

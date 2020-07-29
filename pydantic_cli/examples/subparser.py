@@ -57,14 +57,17 @@ def to_func(sx):
     return example_runner
 
 
-def to_subparser_example():
+def to_subparser_example() -> T.Dict[str, SubParser]:
     """Simply create a dict of SubParser and pass the dict
     to `run_sp_and_exit` or `to_runner_sp`
     """
-
     return {
-        "alpha": SubParser(AlphaOptions, to_func("Alpha"), "Alpha SP Description"),
-        "beta": SubParser(BetaOptions, to_func("Beta"), "Beta SP Description"),
+        "alpha": SubParser[AlphaOptions](
+            AlphaOptions, to_func("Alpha"), "Alpha SP Description"
+        ),
+        "beta": SubParser[BetaOptions](
+            BetaOptions, to_func("Beta"), "Beta SP Description"
+        ),
     }
 
 
