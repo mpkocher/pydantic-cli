@@ -33,7 +33,7 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             pip install -r REQUIREMENTS.txt
-            pip install nose
+            pip install -r REQUIREMENTS-TEST.txt
 
       - save_cache:
           paths:
@@ -50,6 +50,10 @@ jobs:
           command: |
             . venv/bin/activate
             nosetests .
+          name: run mypy
+          command: |
+            . venv/bin/activate
+            mypy pydantic_cli
 
       - store_artifacts:
           path: test-reports
