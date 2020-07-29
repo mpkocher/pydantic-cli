@@ -10,6 +10,8 @@ log = logging.getLogger(__name__)
 class TestExamples(TestCase):
     def _run_with_args(self, args):
         f = to_runner_sp(to_subparser_example())
+        x = " ".join(args)
+        log.info(f"Running with {x}")
         log.info(f"Running {f} with args {args}")
         exit_code = f(args)
         self.assertEqual(exit_code, 0)
