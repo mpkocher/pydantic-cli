@@ -33,6 +33,7 @@ jobs:
             python3 -m venv venv
             . venv/bin/activate
             pip install -r REQUIREMENTS.txt
+            pip install shtab
             pip install -r REQUIREMENTS-TEST.txt
 
       - save_cache:
