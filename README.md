@@ -508,6 +508,43 @@ if __name__ == "__main__":
     run_sp_and_exit(to_subparser_example(), description=__doc__, version='0.1.0')
 
 ```
+# Configuration Details
+
+Pydantic-cli attempts to stylistically follow Pydantic's approach using a class style configuration. See `DefaultConfig in ``pydantic_cli' for more details.
+
+```python
+import typing as T
+
+class DefaultConfig:
+    """
+    Core Default Config "mixin" for CLI configuration.
+    """
+
+    # value used to generate the CLI format --{key}
+    CLI_JSON_KEY: str = "json-config"
+    # Enable JSON config loading
+    CLI_JSON_ENABLE: bool = False
+
+    # Set the default ENV var for defining the JSON config path
+    CLI_JSON_CONFIG_ENV_VAR: str = "PCLI_JSON_CONFIG"
+    # Set the default Path for JSON config file
+    CLI_JSON_CONFIG_PATH: T.Optional[str] = None
+    # If a default path is provided or provided from the commandline
+    # ignore the file. Use this judiciously.
+    CLI_JSON_VALIDATE_PATH: bool = True
+
+    # Can be used to override custom fields
+    # e.g., {"max_records": ('-m', '--max-records')}
+    # or {"max_records": ('-m', )}
+    CLI_EXTRA_OPTIONS: T.Dict[str, CustomOptsType] = {}
+
+    # Customize the default prefix that is generated
+    # if a boolean flag is provided. Boolean custom CLI
+    # MUST be provided as Tuple[str, str]
+    CLI_BOOL_PREFIX: T.Tuple[str, str] = ("--enable-", "--disable-")
+
+```
+
 
 # More Examples
 
@@ -517,6 +554,6 @@ if __name__ == "__main__":
 
 - **Positional Arguments are not supported**. This created too much friction with the JSON file loading feature which could turn positional required arguments into optional values which fundamentally could changed the commandline interface.
 - Pydantic BaseSettings to set values from `dotenv` or ENV variables. This feature of Pydantic is **not supported** in `pydantic-cli`.
-- [Pydantic has a perhaps counterintuitavely sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optiona[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
+- [Pydantic has a perhaps counterintuitively model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
 - Currently **only support flat "simple" types** (e.g., floats, ints, strings, boolean). There's no current support for `List[T]` or nested dicts.
 - Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood and argparse is a bit thorny of an API to build on top of.
