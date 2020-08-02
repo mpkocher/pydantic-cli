@@ -1,7 +1,7 @@
 .PHONY: package deploy mypy
 
 test:
-	nosetests .
+	pytest
 
 package:
 	python setup.py sdist bdist_wheel

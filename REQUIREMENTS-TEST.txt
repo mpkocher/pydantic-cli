@@ -1,2 +1,2 @@
-nose
+pytest
 mypy >= 0.782
