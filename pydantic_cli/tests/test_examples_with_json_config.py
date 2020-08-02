@@ -14,7 +14,7 @@ class TestExample(_TestHarness[Opts]):
             json.dump(d, f)
             f.flush()
             f.name
-            args = ["--json-config", str(f.name)] + more_args
+            args = ["--json-training", str(f.name)] + more_args
             self.run_config(args)
 
     def test_simple_json(self):

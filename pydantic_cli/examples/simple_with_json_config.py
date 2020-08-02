@@ -14,7 +14,7 @@ JSON file. This enables JSON files to be used as "presets".
 The `CLI_JSON_KEY` can customize the commandline option field. By default it
 is set to 'json-config` (which generates a `--json-config` commandline argument).
 
-Similary, `CLI_JSON_ENABLE`
+Similarly, `CLI_JSON_ENABLE`
 """
 import logging
 from pydantic import BaseModel
@@ -26,7 +26,7 @@ log = logging.getLogger(__name__)
 
 class Opts(BaseModel):
     class Config(DefaultConfig):
-        CLI_JSON_KEY = "json-config"
+        CLI_JSON_KEY = "json-training"
         CLI_JSON_ENABLE = True
 
     hdf_file: str
