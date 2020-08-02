@@ -7,4 +7,17 @@ class TestExamples(_TestHarness[Options]):
     CONFIG = TestConfig(Options, example_runner)
 
     def test_simple_01(self):
-        self.run_config(["--input_file", "/path/to/file.txt", "--run_training", "True"])
+        self.run_config(["--input_file", "/path/to/file.txt"])
+
+    def test_simple_02(self):
+        self.run_config(["--input_file", "/path/to/file.txt", "--disable-run_training"])
+
+    def test_simple_03(self):
+        self.run_config(
+            [
+                "--input_file",
+                "/path/to/file.txt",
+                "--disable-run_training",
+                "--enable-dry_run",
+            ]
+        )
