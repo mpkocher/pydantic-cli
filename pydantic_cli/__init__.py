@@ -35,7 +35,14 @@ PrologueHandlerType = F[[T.Any], None]
 ExceptionHandlerType = F[[BaseException], int]
 
 
+# This should probably be a concrete datamodel, but it
+# wouldn't really work stylistically with how Pydantic's Config
+# is defined and "mixed-in"
 class DefaultConfig:
+    """
+    Core Default Config "mixin" for CLI configuration.
+    """
+
     # value used to generate the CLI format --{key}
     CLI_JSON_KEY: str = "json-config"
     # Enable JSON config loading
@@ -45,6 +52,11 @@ class DefaultConfig:
     # or {"max_records": ('-m', )}
     CLI_EXTRA_OPTIONS: T.Dict[str, CustomOptsType] = {}
 
+    # Customize the default prefix that is generated
+    # if a boolean flag is provided. Boolean custom CLI
+    # MUST be provided as Tuple[str, str]
+    CLI_BOOL_PREFIX: T.Tuple[str, str] = ("--enable-", "--disable-")
+
 
 class TerminalEagerCommand(Exception):
     """
@@ -53,6 +65,13 @@ class TerminalEagerCommand(Exception):
     This will be used as a Control structure to deal with the .exit()
     calls that are used on some Actions (e.g., Help, Version)
     """
+
+
+class FailedExecutionException(Exception):
+    def __init__(self, exit_code: int, message: str):
+        self.exit_code = exit_code
+        self.message = message
+        super(FailedExecutionException, self).__init__(self.message)
 
 
 class EagerHelpAction(Action):
@@ -104,7 +123,9 @@ class CustomArgumentParser(ArgumentParser):
         # This is a bit of an issue to return the exit code properly
         # log.debug(f"{self} Class:{self.__class__.__name__} called exit()")
         if status != 0:
-            raise RuntimeError(f"Status ({status}) Failed to run command {message}")
+            raise FailedExecutionException(
+                status, f"Status ({status}) Failed to run command {message}"
+            )
 
 
 class SubParser(T.Generic[M]):
@@ -137,11 +158,25 @@ def _parser_add_version(parser: ArgumentParser, version: str) -> ArgumentParser:
     return parser
 
 
+def __try_to_pretty_type(prefix, field_type) -> str:
+    """
+    This is a marginal improvement to get the types to be
+    displayed in slightly better format.
+
+    FIXME. This needs to be display Union types better.
+    """
+    try:
+        sx = field_type.__name__
+        return f"{prefix}:{sx}"
+    except AttributeError:
+        return f"{field_type}"
+
+
 def __to_field_description(
     default_value=NOT_PROVIDED, field_type=NOT_PROVIDED, description=None
 ):
     desc = "" if description is None else description
-    t = "" if field_type is NOT_PROVIDED else f"type:{field_type}"
+    t = "" if field_type is NOT_PROVIDED else __try_to_pretty_type("type", field_type)
     v = "" if default_value is NOT_PROVIDED else f"default:{default_value}"
     if not (t + v):
         xs = "".join([t, v])
@@ -180,13 +215,61 @@ def __process_tuple(
         )
 
 
+def __add_boolean_option(
+    parser: CustomArgumentParser,
+    field_id: str,
+    cli_custom: CustomOptsType,
+    default_value: bool,
+    is_required: bool,
+) -> CustomArgumentParser:
+    # Overall this is a bit messy to add a boolean flag.
+
+    error_msg = (
+        f"boolean field ({field_id}) with custom CLI options ({cli_custom}) must be defined "
+        "as a Tuple2[str, str] of True, False for the field. For example, (--enable-X, --disable-X)."
+    )
+
+    n = len(cli_custom)
+
+    if n == 2:
+        # Argparse is really a thorny beast
+        # if you set the group level required=True, then the add_argument must be
+        # set to optional (this is encapsulated at the group level). Otherwise
+        # argparse will raise "mutually exclusive arguments must be optional"
+        group = parser.add_mutually_exclusive_group(required=is_required)
+        # log.info(f"Field={field_id}. Creating group {group} required={is_required}")
+
+        # see comments above about Group
+        if is_required:
+            is_required = False
+
+        bool_datum = [(True, "store_true"), (False, "store_false")]
+
+        for k, (bool_, store_bool) in zip(cli_custom, bool_datum):
+            if bool_ != default_value:
+                help_ = f"Set {field_id} to {bool_}"
+                group.add_argument(
+                    k,
+                    help=help_,
+                    action=store_bool,
+                    default=default_value,
+                    dest=field_id,
+                    required=is_required,
+                )
+    else:
+        raise ValueError(error_msg)
+
+    return parser
+
+
 def _add_pydantic_field_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
     field,
     override_value: T.Any = ...,
     override_cli: T.Optional[CustomOptsType] = None,
-    long_prefix="--",
+    long_prefix: str = "--",
+    bool_prefix: T.Tuple[str, str] = DefaultConfig.CLI_BOOL_PREFIX,
 ) -> ArgumentParser:
     """
 
@@ -216,7 +299,13 @@ def _add_pydantic_field_to_parser(
         )
     except KeyError:
         if override_cli is None:
-            cli_custom = (default_long_arg,)
+            if field.type_ == bool:
+                cli_custom = (
+                    f"{bool_prefix[0]}{field_id}",
+                    f"{bool_prefix[1]}{field_id}",
+                )
+            else:
+                cli_custom = (default_long_arg,)
         else:
             cli_custom = __process_tuple(override_cli, default_long_arg)
 
@@ -224,13 +313,16 @@ def _add_pydantic_field_to_parser(
 
     help_doc = __to_field_description(default_value, field.type_, description)
 
-    parser.add_argument(
-        *cli_custom,
-        help=help_doc,
-        default=default_value,
-        dest=field_id,
-        required=is_required,
-    )
+    if field.type_ == bool:
+        __add_boolean_option(parser, field_id, cli_custom, default_value, is_required)
+    else:
+        parser.add_argument(
+            *cli_custom,
+            help=help_doc,
+            default=default_value,
+            dest=field_id,
+            required=is_required,
+        )
 
     return parser
 
@@ -241,12 +333,20 @@ def _add_pydantic_class_to_parser(
 
     for ix, field in cls.__fields__.items():
 
-        dx = getattr(cls.Config, "CLI_EXTRA_OPTIONS", {})
+        dx = getattr(cls.Config, "CLI_EXTRA_OPTIONS", DefaultConfig.CLI_EXTRA_OPTIONS)
         default_cli_opts: T.Optional[CustomOptsType] = dx.get(ix, None)
+        custom_bool_prefix = getattr(
+            cls.Config, "CLI_BOOL_PREFIX", DefaultConfig.CLI_BOOL_PREFIX
+        )
 
         override_value = default_overrides.get(ix, ...)
         _add_pydantic_field_to_parser(
-            p, ix, field, override_value=override_value, override_cli=default_cli_opts
+            p,
+            ix,
+            field,
+            override_value=override_value,
+            override_cli=default_cli_opts,
+            bool_prefix=custom_bool_prefix,
         )
 
     return p
@@ -282,6 +382,14 @@ def pydantic_class_to_parser(
     return p
 
 
+def _get_error_exit_code(ex: BaseException, default_exit_code: int = 1) -> int:
+    if isinstance(ex, FailedExecutionException):
+        exit_code = ex.exit_code
+    else:
+        exit_code = default_exit_code
+    return exit_code
+
+
 def default_exception_handler(ex: BaseException) -> int:
     """
     Maps/Transforms the Exception type to an integer exit code
@@ -292,7 +400,15 @@ def default_exception_handler(ex: BaseException) -> int:
     sys.stderr.write(str(ex))
     exc_type, exc_value, exc_traceback = sys.exc_info()
     traceback.print_tb(exc_traceback, file=sys.stderr)
-    return 1
+    return _get_error_exit_code(ex, 1)
+
+
+def default_minimal_exception_handler(ex: BaseException) -> int:
+    """
+    Only write a terse error message. Don't output the entire stacktrace
+    """
+    sys.stderr.write(str(ex))
+    return _get_error_exit_code(ex, 1)
 
 
 def default_epilogue_handler(exit_code: int, run_time_sec: float) -> None:
