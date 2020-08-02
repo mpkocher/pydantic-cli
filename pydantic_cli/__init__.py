@@ -1,16 +1,25 @@
 import datetime
-import json
 import sys
 import traceback
-from argparse import ArgumentParser, ArgumentDefaultsHelpFormatter, SUPPRESS, Action
 import logging
 import typing as T
 from typing import Callable as F
 
 from ._version import __version__
 
-from pydantic import BaseModel
-
+from .core import M, CustomOptsType
+from .core import EpilogueHandlerType, PrologueHandlerType, ExceptionHandlerType
+from .core import (
+    DefaultConfig,
+    CliConfig,
+    DEFAULT_CLI_CONFIG,
+    _get_cli_config_from_model,
+)
+from .utils import _load_json_file, _resolve_file, _resolve_file_or_none_and_warn
+from .argparse import CustomArgumentParser, EagerHelpAction
+from .argparse import _parser_add_help, _parser_add_version
+from .argparse import FailedExecutionException, TerminalEagerCommand
+from argparse import ArgumentDefaultsHelpFormatter
 
 log = logging.getLogger(__name__)
 
@@ -23,109 +32,11 @@ __all__ = [
     "to_runner_sp",
     "run_sp_and_exit",
     "default_exception_handler",
+    "default_minimal_exception_handler",
     "default_prologue_handler",
     "default_epilogue_handler",
     "DefaultConfig",
 ]
-
-M = T.TypeVar("M", bound=BaseModel)
-CustomOptsType = T.Union[T.Tuple[str], T.Tuple[str, str]]
-EpilogueHandlerType = F[[int, float], None]
-PrologueHandlerType = F[[T.Any], None]
-ExceptionHandlerType = F[[BaseException], int]
-
-
-# This should probably be a concrete datamodel, but it
-# wouldn't really work stylistically with how Pydantic's Config
-# is defined and "mixed-in"
-class DefaultConfig:
-    """
-    Core Default Config "mixin" for CLI configuration.
-    """
-
-    # value used to generate the CLI format --{key}
-    CLI_JSON_KEY: str = "json-config"
-    # Enable JSON config loading
-    CLI_JSON_ENABLE: bool = False
-    # Can be used to override custom fields
-    # e.g., {"max_records": ('-m', '--max-records')}
-    # or {"max_records": ('-m', )}
-    CLI_EXTRA_OPTIONS: T.Dict[str, CustomOptsType] = {}
-
-    # Customize the default prefix that is generated
-    # if a boolean flag is provided. Boolean custom CLI
-    # MUST be provided as Tuple[str, str]
-    CLI_BOOL_PREFIX: T.Tuple[str, str] = ("--enable-", "--disable-")
-
-
-class TerminalEagerCommand(Exception):
-    """
-    An "Eager" Action (e.g., --version, --help) has completed successfully
-
-    This will be used as a Control structure to deal with the .exit()
-    calls that are used on some Actions (e.g., Help, Version)
-    """
-
-
-class FailedExecutionException(Exception):
-    def __init__(self, exit_code: int, message: str):
-        self.exit_code = exit_code
-        self.message = message
-        super(FailedExecutionException, self).__init__(self.message)
-
-
-class EagerHelpAction(Action):
-    def __init__(self, option_strings, dest=SUPPRESS, default=SUPPRESS, help=None):
-        super(EagerHelpAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            default=default,
-            nargs=0,
-            help=help,
-        )
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        parser.print_help()
-        raise TerminalEagerCommand("Help completed running")
-
-
-class EagerVersionAction(Action):
-    def __init__(
-        self,
-        option_strings,
-        version=__version__,
-        dest=SUPPRESS,  # wtf does this do?
-        default=SUPPRESS,
-        help="show program's version number and exit",
-    ):
-        super(EagerVersionAction, self).__init__(
-            option_strings=option_strings,
-            dest=dest,
-            default=default,
-            nargs=0,
-            help=help,
-        )
-        self.version = version
-
-    def __call__(self, parser, namespace, values, option_string=None):
-        version = self.version
-        if version is None:
-            version = parser.version
-        formatter = parser._get_formatter()
-        formatter.add_text(version)
-        parser._print_message(formatter.format_help(), sys.stdout)
-        raise TerminalEagerCommand("Version completed running")
-
-
-class CustomArgumentParser(ArgumentParser):
-    def exit(self, status: int = 0, message: T.Optional[str] = None) -> T.NoReturn:  # type: ignore
-        # THIS IS NO longer used because of the custom Version and Help
-        # This is a bit of an issue to return the exit code properly
-        # log.debug(f"{self} Class:{self.__class__.__name__} called exit()")
-        if status != 0:
-            raise FailedExecutionException(
-                status, f"Status ({status}) Failed to run command {message}"
-            )
 
 
 class SubParser(T.Generic[M]):
@@ -144,18 +55,6 @@ class SubParser(T.Generic[M]):
         name = getattr(self.runner_func, "__name__", str(self.runner_func))
         d = dict(k=str(self.model_class), f=name)
         return "<{k} func:{f} >".format(**d)
-
-
-def _parser_add_help(p: CustomArgumentParser):
-    p.add_argument(
-        "--help", help="Print Help and Exit", action=EagerHelpAction, default=SUPPRESS
-    )
-    return p
-
-
-def _parser_add_version(parser: ArgumentParser, version: str) -> ArgumentParser:
-    parser.add_argument("--version", action=EagerVersionAction, version=version)
-    return parser
 
 
 def __try_to_pretty_type(prefix, field_type) -> str:
@@ -215,7 +114,7 @@ def __process_tuple(
         )
 
 
-def __add_boolean_option(
+def __add_boolean_arg_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
     cli_custom: CustomOptsType,
@@ -270,7 +169,7 @@ def _add_pydantic_field_to_parser(
     override_cli: T.Optional[CustomOptsType] = None,
     long_prefix: str = "--",
     bool_prefix: T.Tuple[str, str] = DefaultConfig.CLI_BOOL_PREFIX,
-) -> ArgumentParser:
+) -> CustomArgumentParser:
     """
 
     :param field_id: Global Id used to store
@@ -314,7 +213,9 @@ def _add_pydantic_field_to_parser(
     help_doc = __to_field_description(default_value, field.type_, description)
 
     if field.type_ == bool:
-        __add_boolean_option(parser, field_id, cli_custom, default_value, is_required)
+        __add_boolean_arg_to_parser(
+            parser, field_id, cli_custom, default_value, is_required
+        )
     else:
         parser.add_argument(
             *cli_custom,
@@ -333,10 +234,9 @@ def _add_pydantic_class_to_parser(
 
     for ix, field in cls.__fields__.items():
 
-        dx = getattr(cls.Config, "CLI_EXTRA_OPTIONS", DefaultConfig.CLI_EXTRA_OPTIONS)
-        default_cli_opts: T.Optional[CustomOptsType] = dx.get(ix, None)
-        custom_bool_prefix = getattr(
-            cls.Config, "CLI_BOOL_PREFIX", DefaultConfig.CLI_BOOL_PREFIX
+        cli_config = _get_cli_config_from_model(cls)
+        default_cli_opts: T.Optional[CustomOptsType] = cli_config.custom_opts.get(
+            ix, None
         )
 
         override_value = default_overrides.get(ix, ...)
@@ -346,7 +246,7 @@ def _add_pydantic_class_to_parser(
             field,
             override_value=override_value,
             override_cli=default_cli_opts,
-            bool_prefix=custom_bool_prefix,
+            bool_prefix=cli_config.bool_prefix,
         )
 
     return p
@@ -369,10 +269,10 @@ def pydantic_class_to_parser(
 
     _add_pydantic_class_to_parser(p, cls, default_value_override)
 
-    enable_json, json_key_name = _get_json_config_from_model(cls)
+    cli_config = _get_cli_config_from_model(cls)
 
-    if enable_json:
-        _parser_add_arg_json_file(p, json_key_name)
+    if cli_config.json_config_enable:
+        _parser_add_arg_json_file(p, cli_config)
 
     _parser_add_help(p)
 
@@ -441,6 +341,11 @@ def _runner(
     prologue_handler: PrologueHandlerType,
     epilogue_handler: EpilogueHandlerType,
 ) -> int:
+    """
+    This is the fundamental hook into orchestrating the processing of the
+    supplied commandline args.
+    """
+
     def now():
         return datetime.datetime.now()
 
@@ -463,11 +368,22 @@ def _runner(
         # for the simple parser, the Pydantic class could just be passed in
         cls = pargs.cls
         # There's some slop in here using set_default(func=) hack/trick
-        # hence we have to explictly define the expected type
+        # hence we have to explicitly define the expected type
         runner_func: F[[T.Any], int] = pargs.func
 
         # log.debug(pargs.__dict__)
-        opts = cls(**pargs.__dict__)
+        d = pargs.__dict__
+
+        # This is a bit sloppy. There's some fields that are added
+        # to the argparse namespace to get around some of argparse's thorny design
+        pure_keys = cls.schema()["properties"].keys()
+
+        # Remove the items that may have
+        # polluted the namespace (e.g., func, cls, json_config)
+        # to avoid leaking into the Pydantic data model.
+        pure_d = {k: v for k, v in d.items() if k in pure_keys}
+
+        opts = cls(**pure_d)
 
         # this validation interface is a bit odd
         # and the errors aren't particularly pretty in the console
@@ -489,56 +405,53 @@ def null_setup_hook(args: T.List[str]) -> T.Dict[str, T.Any]:
     return {}
 
 
-def _load_json_file(json_path: str) -> T.Dict[str, T.Any]:
-    with open(json_path, "r") as f:
-        d: T.Dict[str, T.Any] = json.load(f)
-    return d
-
-
 def _parser_add_arg_json_file(
-    p: CustomArgumentParser, key: str
+    p: CustomArgumentParser, cli_config: CliConfig
 ) -> CustomArgumentParser:
-    field = f"--{key}"
+
+    validator = (
+        _resolve_file
+        if cli_config.json_config_path_validate
+        else _resolve_file_or_none_and_warn
+    )
+    field = f"--{cli_config.json_config_key}"
+
+    path = cli_config.json_config_path
+
+    help = f"Path to configuration JSON file. Can be set using ENV VAR ({cli_config.json_config_env_var}) (default:{path})"
+
     p.add_argument(
-        field, default=None, type=str, help="Path to JSON file", required=False
+        field, default=path, type=validator, help=help, required=False,
     )
     return p
 
 
-def to_parser_json_file(json_key_name: str) -> CustomArgumentParser:
+def create_parser_with_config_json_file_arg(
+    cli_config: CliConfig,
+) -> CustomArgumentParser:
     p = CustomArgumentParser(add_help=False)
-    _parser_add_arg_json_file(p, json_key_name)
+    _parser_add_arg_json_file(p, cli_config)
     return p
 
 
 def setup_hook_to_load_json(
-    args: T.List[str], json_config_field_name: str
+    args: T.List[str], cli_config: CliConfig
 ) -> T.Dict[str, T.Any]:
+
     # This can't have HelpAction or any other "Eager" action defined
-    parser = to_parser_json_file(json_config_field_name)
+    parser = create_parser_with_config_json_file_arg(cli_config)
 
     # this is a namespace
     pjargs, _ = parser.parse_known_args(args)
 
     d = {}
-    # Argparse will convert "-" to "_" because this dumb Namespace design (which is just a glorified dict)
-    sanitized_field_name = json_config_field_name.replace("-", "_")
-    json_config_path = getattr(pjargs, sanitized_field_name, None)
+
+    json_config_path = getattr(pjargs, cli_config.json_config_key_sanitized(), None)
 
     if json_config_path is not None:
         d = _load_json_file(json_config_path)
     # log.debug(f"Loaded custom overrides {d}")
     return d
-
-
-def _get_json_config_from_model(cls) -> T.Tuple[bool, str]:
-    enable_json_config: bool = getattr(
-        cls.Config, "CLI_JSON_ENABLE", DefaultConfig.CLI_JSON_ENABLE
-    )
-    json_key_field_name: str = getattr(
-        cls.Config, "CLI_JSON_KEY", DefaultConfig.CLI_JSON_KEY
-    )
-    return enable_json_config, json_key_field_name
 
 
 def _runner_with_args(
@@ -565,11 +478,14 @@ def _runner_with_args(
         parser.set_defaults(func=runner_func, cls=cls)
         return parser
 
-    enable_json_config, json_key_field_name = _get_json_config_from_model(cls)
-    if enable_json_config:
+    cli_config = _get_cli_config_from_model(cls)
+
+    if cli_config.json_config_enable:
 
         def __setup(args_):
-            return setup_hook_to_load_json(args_, json_key_field_name)
+            c = cli_config.copy()
+            c.json_config_path_validate = False
+            return setup_hook_to_load_json(args_, c)
 
     else:
         __setup = null_setup_hook
@@ -674,12 +590,11 @@ def to_subparser(
         _add_pydantic_class_to_parser(
             spx, sbm.model_class, default_overrides=overrides_defaults
         )
-        enable_json_key, json_key_field_name = _get_json_config_from_model(
-            sbm.model_class
-        )
 
-        if enable_json_key:
-            _parser_add_arg_json_file(spx, json_key_field_name)
+        cli_config = _get_cli_config_from_model(sbm.model_class)
+
+        if cli_config.json_config_enable:
+            _parser_add_arg_json_file(spx, cli_config)
 
         _parser_add_help(spx)
 
@@ -706,12 +621,15 @@ def to_runner_sp(
     # you probably don't want for consistency sake.
 
     for sbm in subparsers.values():
-        enable_json, json_key_name = _get_json_config_from_model(sbm.model_class)
+        cli_config = _get_cli_config_from_model(sbm.model_class)
 
-        if enable_json:
+        if cli_config.json_config_enable:
 
             def _setup_hook(args: T.List[str]) -> T.Dict[str, T.Any]:
-                return setup_hook_to_load_json(args, json_key_name)
+                # We allow the setup to fail if the JSON config isn't found
+                c = cli_config.copy()
+                c.json_config_path_validate = False
+                return setup_hook_to_load_json(args, cli_config)
 
         else:
             _setup_hook = null_setup_hook
