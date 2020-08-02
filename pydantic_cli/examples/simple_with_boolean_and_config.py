@@ -7,10 +7,13 @@ Note the optional boolean value must be supplied as `--run_training False`
 """
 from pydantic import BaseModel
 
-from pydantic_cli import run_and_exit
+from pydantic_cli import run_and_exit, DefaultConfig
 
 
 class Options(BaseModel):
+    class Config(DefaultConfig):
+        CLI_BOOL_PREFIX = ("--yes-", "--no-")
+
     input_file: str
     run_training: bool = True
     dry_run: bool = False

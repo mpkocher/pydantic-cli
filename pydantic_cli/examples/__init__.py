@@ -1,6 +1,5 @@
 import sys
 import logging
-import typing as T
 from enum import Enum
 
 log = logging.getLogger(__name__)
@@ -28,6 +27,9 @@ def prologue_handler(opts) -> None:
     )
     logging.basicConfig(level="DEBUG", stream=sys.stdout, format=format_str)
     log.info(f"Running {__file__} with {opts}")
+
+
+setup_logger = prologue_handler
 
 
 def epilogue_handler(exit_code: int, run_time_sec: float) -> None:
