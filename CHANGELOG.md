@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Version 3.2.0
+
+- Add support for emitting autocomplete in bash/zsh using shtab
+
 ## Version 3.1.0
 
 - Enable setting the default JSON config file via `PCLI_JSON_CONFIG` env var
