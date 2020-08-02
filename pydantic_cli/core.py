@@ -44,6 +44,7 @@ class DefaultConfig:
 
 class CliConfig(BaseModel):
     """Internal Model for encapsulating the core configuration of the CLI model"""
+
     class Config:
         # allow_mutation: bool = False
         validate_all = True
