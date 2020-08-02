@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from pydantic_cli import __version__
 from pydantic_cli import run_and_exit, DefaultConfig
 from pydantic_cli.examples import ExampleConfigDefaults
-from pydantic_cli.shell_completion import HAS_SHTAB
+from pydantic_cli.shell_completion import HAS_AUTOCOMPLETE_SUPPORT
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ class Options(BaseModel):
             "min_filter_score": ("-f",),
             "input_file": ("-i",),
         }
-        CLI_SHELL_COMPLETION_ENABLE = HAS_SHTAB
+        CLI_SHELL_COMPLETION_ENABLE = HAS_AUTOCOMPLETE_SUPPORT
 
     input_file: str
     min_filter_score: float

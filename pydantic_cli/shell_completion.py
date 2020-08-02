@@ -15,9 +15,9 @@ SUPPORTED_SHELLS = ["zsh", "bash"]
 try:
     import shtab  # type: ignore
 
-    HAS_SHTAB = True
+    HAS_AUTOCOMPLETE_SUPPORT = True
 except ImportError:
-    HAS_SHTAB = False
+    HAS_AUTOCOMPLETE_SUPPORT = False
 
 
 SUPPORTED_SHELLS = ["zsh", "bash"]
@@ -25,7 +25,7 @@ SUPPORTED_SHELLS = ["zsh", "bash"]
 
 class EmitShellCompletionAction(Action):
     def __call__(self, parser, namespace, values, option_string=None):
-        if not HAS_SHTAB:
+        if not HAS_AUTOCOMPLETE_SUPPORT:
             raise ImportError("Unable to export to shell. shtab is not installed")
 
         if values in SUPPORTED_SHELLS:
