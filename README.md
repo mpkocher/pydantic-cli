@@ -508,7 +508,7 @@ if __name__ == "__main__":
     run_sp_and_exit(to_subparser_example(), description=__doc__, version='0.1.0')
 
 ```
-# Configuration Details
+# Configuration Details and Advanced Features
 
 Pydantic-cli attempts to stylistically follow Pydantic's approach using a class style configuration. See `DefaultConfig in ``pydantic_cli' for more details.
 
@@ -530,7 +530,6 @@ class DefaultConfig:
     # Set the default Path for JSON config file
     CLI_JSON_CONFIG_PATH: T.Optional[str] = None
     # If a default path is provided or provided from the commandline
-    # ignore the file. Use this judiciously.
     CLI_JSON_VALIDATE_PATH: bool = True
 
     # Can be used to override custom fields
@@ -543,6 +542,11 @@ class DefaultConfig:
     # MUST be provided as Tuple[str, str]
     CLI_BOOL_PREFIX: T.Tuple[str, str] = ("--enable-", "--disable-")
 
+    # Add a flag that will emit the shell completion
+    # this requires 'shtab'
+    # https://github.com/iterative/shtab
+    CLI_SHELL_COMPLETION_ENABLE: bool = False
+    CLI_SHELL_COMPLETION_FLAG: str = "--emit-completion"
 ```
 
 
