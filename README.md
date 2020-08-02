@@ -68,8 +68,7 @@ if __name__ == '__main__':
 
 ```
 
-**WARNING**: Boolean values must be communicated explicitly (e.g., `--run_training True`). This explicitness is chosen to avoid confusion with auto-generated option flags (`--is-run_training` or `--no-run_training`) that do not directly map to the core Pydantic data model.
-
+**WARNING**: Data models that have boolean values and generated CLI flags (e.g., `--enable-filter` or `--disable-filter`) require special attention. See the "Defining Boolean Flags" section for more details. 
 
 ## Loading Configuration using JSON
 
@@ -220,6 +219,75 @@ Found 1 error in 1 file (checked 1 source file)
 
 ```
 
+## Defining Boolean Flags
+
+Boolean options in Pydantic data models require special attention. 
+
+By default, when defining a model with a boolean flag, a "enable" or "disable" flag will be added depending on the default value.
+
+For example.
+
+```python
+from pydantic import BaseModel
+
+from pydantic_cli import run_and_exit
+
+
+class Options(BaseModel):
+    input_file: str
+    run_training: bool = True
+    dry_run: bool = False
+
+
+def example_runner(opts: Options) -> int:
+    print(f"Mock example running with {opts}")
+    return 0
+
+
+if __name__ == "__main__":
+    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")
+```
+
+Since `run_training` has a default value of `True`, a commandline flag of `--disable-run_training` will be created. Enabling this from the commandline would set `run_training` in the Pydantic data model to `False`.
+
+Similarly, `dry_run` has a default value of `False` and a commandline flag of `--enable-dry_run` will be created. Enabling this flag will set `dry_run` to True.
+
+The default prefixes of the boolean flags are `(--enable-, --disable-)` and can configured in the configuration of the data model.
+
+For example,
+
+```python
+from pydantic import BaseModel
+
+from pydantic_cli import DefaultConfig
+
+
+class Options(BaseModel):
+    class Config(DefaultConfig):
+        CLI_BOOL_PREFIX = ('--yes-', '--no-')
+
+    input_file: str
+    run_training: bool = True
+    dry_run: bool = False
+```
+
+Similar to the non-boolean flags, the custom CLI options can be set. However, there's an important difference.
+
+**Custom Boolean flags must be configured with BOTH True and False values** with a type of `Tuple[str, str]`. 
+
+For example,
+
+
+```python
+from pydantic import BaseModel
+from pydantic_cli import DefaultConfig
+
+class Opts(BaseModel):
+    class Config(DefaultConfig):
+        CLI_EXTRA_OPTIONS = {'dry_run': ('--enable-dry-run', '--no-dry-run')}
+
+    dry_run: bool = False
+```
 
 ## Customization and Hooks
 
@@ -447,12 +515,8 @@ if __name__ == "__main__":
 
 # Limitations
 
+- **Positional Arguments are not supported**. This created too much friction with the JSON file loading feature which could turn positional required arguments into optional values which fundamentally could changed the commandline interface.
+- Pydantic BaseSettings to set values from `dotenv` or ENV variables. This feature of Pydantic is **not supported** in `pydantic-cli`.
+- [Pydantic has a perhaps counterintuitavely sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optiona[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
 - Currently **only support flat "simple" types** (e.g., floats, ints, strings, boolean). There's no current support for `List[T]` or nested dicts.
 - Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood and argparse is a bit thorny of an API to build on top of.
-
-
-### To Improve
-
-- Better type descriptions in `--help`
-- Better support for boolean values to avoid having `--run_training True` and have more natural CLI arg style, such as `--run_training` and `--no_run_training`.
-- Better error messages
