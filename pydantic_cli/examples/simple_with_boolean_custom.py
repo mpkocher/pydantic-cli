@@ -18,7 +18,8 @@ class Options(BaseModel):
     enable_alpha: bool
     enable_beta: bool = False
     enable_dragon: Union[str, int]
-    enable_gamma: Optional[bool] = ...
+    # https: // pydantic - docs.helpmanual.io / usage / models /  # required-optional-fields
+    enable_gamma: Optional[bool]  # ... Don't use ellipsis in Pydantic with mypy. This is a really fundamental problem.
     enable_delta: Optional[bool] = None
     enable_epsilon: Optional[
         bool
