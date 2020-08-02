@@ -68,7 +68,8 @@ class CliConfig(BaseModel):
         return self.json_config_key.replace("-", "_")
 
 
-DEFAULT_CLI_CONFIG: T.Final[CliConfig] = CliConfig()
+# This should really use final for 3.8 T.Final[CliConfig]
+DEFAULT_CLI_CONFIG = CliConfig()
 
 
 def _get_cli_config_from_model(cls: T.Type[M]) -> CliConfig:
