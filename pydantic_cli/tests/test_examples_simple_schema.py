@@ -1,10 +1,10 @@
 from pydantic_cli.examples.simple_schema import Options, example_runner
 
-from . import _TestHarness, TestConfig
+from . import _TestHarness, HarnessConfig
 
 
 class TestExamples(_TestHarness):
-    CONFIG = CONFIG = TestConfig(Options, example_runner)
+    CONFIG = HarnessConfig(Options, example_runner)
 
     def test_01(self):
         args = (

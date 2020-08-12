@@ -2,7 +2,7 @@ import json
 import os
 from tempfile import NamedTemporaryFile
 
-from . import _TestHarness, TestConfig
+from . import _TestHarness, HarnessConfig
 
 from pydantic_cli.examples.simple_with_json_config_not_found import (
     Options,
@@ -12,7 +12,7 @@ from pydantic_cli.examples.simple_with_json_config_not_found import (
 
 class TestExamples(_TestHarness[Options]):
 
-    CONFIG = TestConfig(Options, example_runner)
+    CONFIG = HarnessConfig(Options, example_runner)
 
     def test_simple_01(self):
         self.run_config(["--input_file", "/path/to/file.txt", "--max_record", "1234"])

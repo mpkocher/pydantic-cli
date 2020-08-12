@@ -4,11 +4,11 @@ from pydantic_cli.examples.simple_with_shell_autocomplete_support import (
 )
 from pydantic_cli.shell_completion import HAS_AUTOCOMPLETE_SUPPORT
 
-from . import _TestHarness, TestConfig
+from . import _TestHarness, HarnessConfig
 
 
 class TestExamples(_TestHarness[Options]):
-    CONFIG = TestConfig(Options, example_runner)
+    CONFIG = HarnessConfig(Options, example_runner)
 
     def test_simple_01(self):
         self.run_config(["-i", "/path/to/file.txt", "-f", "1.0", "-m", "2"])
