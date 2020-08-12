@@ -10,17 +10,17 @@ import sys
 from argparse import Action, ArgumentParser
 from .argparse import TerminalEagerCommand
 
-SUPPORTED_SHELLS = ["zsh", "bash"]
-
 try:
     import shtab  # type: ignore
+    from shtab import SUPPORTED_SHELLS
 
     HAS_AUTOCOMPLETE_SUPPORT = True
 except ImportError:
+    # let's just add these, then
+    # create a runtime error instead of
+    # failing to create choice option will no values
+    SUPPORTED_SHELLS = ["zsh", "bash"]
     HAS_AUTOCOMPLETE_SUPPORT = False
-
-
-SUPPORTED_SHELLS = ["zsh", "bash"]
 
 
 class EmitShellCompletionAction(Action):
@@ -30,7 +30,7 @@ class EmitShellCompletionAction(Action):
 
         if values in SUPPORTED_SHELLS:
             print(shtab.complete(parser, values))
-            sys.stderr.write("Completed writing shell output to stdout\n")
+            sys.stderr.write(f"Completed writing {values} shell output to stdout\n")
             raise TerminalEagerCommand
 
         raise ValueError(
