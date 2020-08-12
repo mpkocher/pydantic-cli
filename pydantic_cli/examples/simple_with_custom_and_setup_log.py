@@ -18,14 +18,14 @@ import logging
 from pydantic import BaseModel
 
 from pydantic_cli import __version__
-from pydantic_cli import run_and_exit, DefaultConfig
+from pydantic_cli import run_and_exit
 from pydantic_cli.examples import ExampleConfigDefaults, LogLevel
 
 log = logging.getLogger(__name__)
 
 
 class Options(BaseModel):
-    class Config(DefaultConfig, ExampleConfigDefaults):
+    class Config(ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {
             "max_records": ("-m",),
             "log_level": ("-l",),

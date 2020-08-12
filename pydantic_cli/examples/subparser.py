@@ -15,13 +15,13 @@ import typing as T
 from pydantic import BaseModel, AnyUrl
 
 from pydantic_cli.examples import ExampleConfigDefaults, LogLevel, prologue_handler
-from pydantic_cli import run_sp_and_exit, SubParser, DefaultConfig
+from pydantic_cli import run_sp_and_exit, SubParser
 
 log = logging.getLogger(__name__)
 
 
 class AlphaOptions(BaseModel):
-    class Config(DefaultConfig, ExampleConfigDefaults):
+    class Config(ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {
             "max_records": ("-m", "--max-records"),
             "input_file": ("-i",),
@@ -34,7 +34,7 @@ class AlphaOptions(BaseModel):
 
 
 class BetaOptions(BaseModel):
-    class Config(DefaultConfig, ExampleConfigDefaults):
+    class Config(ExampleConfigDefaults):
         CLI_EXTRA_OPTIONS = {
             "url": ("-u", "--url"),
             "num_retries": ("-n", "--num-retries"),

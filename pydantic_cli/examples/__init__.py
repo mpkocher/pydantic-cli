@@ -2,10 +2,12 @@ import sys
 import logging
 from enum import Enum
 
+from pydantic_cli import DefaultConfig
+
 log = logging.getLogger(__name__)
 
 
-class ExampleConfigDefaults:
+class ExampleConfigDefaults(DefaultConfig):
     # validate_all: bool = True
     # validate_assignment: bool = False
     allow_mutation: bool = False
