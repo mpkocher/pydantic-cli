@@ -44,7 +44,7 @@ __all__ = [
     "HAS_AUTOCOMPLETE_SUPPORT",
     "PrologueHandlerType",
     "EpilogueHandlerType",
-    "__version__"
+    "__version__",
 ]
 
 
