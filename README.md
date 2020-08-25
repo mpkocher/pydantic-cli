@@ -549,6 +549,39 @@ class DefaultConfig:
     CLI_SHELL_COMPLETION_FLAG: str = "--emit-completion"
 ```
 
+## AutoComplete leveraging shtab
+
+There is support for `zsh` and `bash` autocomplete generation using [shtab](https://github.com/iterative/shtab)
+
+The **optional** dependency can be installed as follows.
+```bash
+pip install "pydantic-cli[shtab]"
+```
+
+To enable the emitting of bash/zsh autocomplete files from shtab, set `CLI_SHELL_COMPLETION_ENABLE: bool = True` in your data model `Config`.
+
+Then use your executable (or `.py` file) emit the autocomplete file to the necessary output directory. 
+
+For example, using `zsh` and a script call `my-tool.py`, `my-tool.py --emit-completion zsh > ~/.zsh/completions/_my-tool.py`. By convention/default, the executable name must be prefixed with an underscore.  
+
+When using autocomplete it should looks similar to this. 
+
+
+```bash
+> ./my-tool.py --emit-completion zsh > ~/.zsh/completions/_my-tool.py
+Completed writing zsh shell output to stdout
+> ./my-tool.py --max
+ -- option --
+--max_filter_score  --  (type:int default:1.0)
+--max_length        --  (type:int default:12)
+--max_records       --  (type:int default:123455)
+--max_size          --  (type:int default:13)
+```
+
+See [shtab](https://github.com/iterative/shtab) for more details.
+
+
+Note, that due to the (typically) global zsh completions directory, this can create some friction points with different virtual (or conda) ENVS with the same executable name.
 
 # More Examples
 
