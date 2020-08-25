@@ -3,9 +3,7 @@ import logging
 
 from pydantic import BaseModel
 
-from pydantic_cli import __version__, CliConfig
 from pydantic_cli import run_and_exit, DefaultConfig
-from pydantic_cli.examples import ExampleConfigDefaults
 
 log = logging.getLogger(__name__)
 

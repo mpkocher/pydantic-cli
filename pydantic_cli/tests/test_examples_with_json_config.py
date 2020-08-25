@@ -1,4 +1,4 @@
-from . import _TestHarness, TestConfig
+from . import _TestHarness, HarnessConfig
 
 import json
 from tempfile import NamedTemporaryFile
@@ -7,7 +7,7 @@ from pydantic_cli.examples.simple_with_json_config import Opts, runner
 
 class TestExample(_TestHarness[Opts]):
 
-    CONFIG = TestConfig(Opts, runner)
+    CONFIG = HarnessConfig(Opts, runner)
 
     def _util(self, d, more_args):
         with NamedTemporaryFile(mode="w", delete=True) as f:

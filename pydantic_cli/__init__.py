@@ -20,6 +20,11 @@ from .argparse import CustomArgumentParser, EagerHelpAction
 from .argparse import _parser_add_help, _parser_add_version
 from .argparse import FailedExecutionException, TerminalEagerCommand
 from argparse import ArgumentDefaultsHelpFormatter
+from .shell_completion import (
+    EmitShellCompletionAction,
+    add_shell_completion_arg,
+    HAS_AUTOCOMPLETE_SUPPORT,
+)
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +41,10 @@ __all__ = [
     "default_prologue_handler",
     "default_epilogue_handler",
     "DefaultConfig",
+    "HAS_AUTOCOMPLETE_SUPPORT",
+    "PrologueHandlerType",
+    "EpilogueHandlerType",
+    "__version__",
 ]
 
 
@@ -273,6 +282,9 @@ def pydantic_class_to_parser(
 
     if cli_config.json_config_enable:
         _parser_add_arg_json_file(p, cli_config)
+
+    if cli_config.shell_completion_enable:
+        add_shell_completion_arg(p, cli_config.shell_completion_flag)
 
     _parser_add_help(p)
 

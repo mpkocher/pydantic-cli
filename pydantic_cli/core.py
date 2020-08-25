@@ -41,6 +41,12 @@ class DefaultConfig:
     # MUST be provided as Tuple[str, str]
     CLI_BOOL_PREFIX: T.Tuple[str, str] = ("--enable-", "--disable-")
 
+    # Add a flag that will emit the shell completion
+    # this requires 'shtab'
+    # https://github.com/iterative/shtab
+    CLI_SHELL_COMPLETION_ENABLE: bool = False
+    CLI_SHELL_COMPLETION_FLAG: str = "--emit-completion"
+
 
 class CliConfig(BaseModel):
     """Internal Model for encapsulating the core configuration of the CLI model"""
@@ -57,6 +63,8 @@ class CliConfig(BaseModel):
     json_config_path_validate: bool = DefaultConfig.CLI_JSON_VALIDATE_PATH
     bool_prefix: T.Tuple[str, str] = DefaultConfig.CLI_BOOL_PREFIX
     custom_opts: T.Dict[str, CustomOptsType] = DefaultConfig.CLI_EXTRA_OPTIONS
+    shell_completion_enable: bool = DefaultConfig.CLI_SHELL_COMPLETION_ENABLE
+    shell_completion_flag: str = DefaultConfig.CLI_SHELL_COMPLETION_FLAG
 
     def json_config_key_sanitized(self):
         """
@@ -107,6 +115,18 @@ def _get_cli_config_from_model(cls: T.Type[M]) -> CliConfig:
         cls.Config, "CLI_BOOL_PREFIX", DEFAULT_CLI_CONFIG.bool_prefix
     )
 
+    shell_compeltion_enable: bool = getattr(
+        cls.Config,
+        "CLI_SHELL_COMPLETION_ENABLE",
+        DEFAULT_CLI_CONFIG.shell_completion_enable,
+    )
+
+    shell_completion_flag: T.Optional[str] = getattr(
+        cls.Config,
+        "CLI_SHELL_COMPLETION_FLAG",
+        DEFAULT_CLI_CONFIG.shell_completion_flag,
+    )
+
     return CliConfig(
         json_config_enable=enable_json_config,
         json_config_key=json_key_field_name,
@@ -115,4 +135,6 @@ def _get_cli_config_from_model(cls: T.Type[M]) -> CliConfig:
         json_config_path_validate=json_config_validate_path,
         bool_prefix=custom_bool_prefix,
         custom_opts=custom_opts,
+        shell_completion_enable=shell_compeltion_enable,
+        shell_completion_flag=shell_completion_flag,
     )

@@ -9,12 +9,12 @@ from typing import Optional
 from pydantic import BaseModel, Field
 
 from pydantic_cli.examples import ExampleConfigDefaults
-from pydantic_cli import run_and_exit
+from pydantic_cli import run_and_exit, HAS_AUTOCOMPLETE_SUPPORT
 
 
 class Options(BaseModel):
     class Config(ExampleConfigDefaults):
-        pass
+        CLI_SHELL_COMPLETION_ENABLE = HAS_AUTOCOMPLETE_SUPPORT
 
     input_file: str = Field(
         ...,

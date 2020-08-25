@@ -1,5 +1,5 @@
 import unittest
-from typing import NamedTuple, TypeVar, Generic, Type, Any
+from typing import TypeVar, Generic, Type
 from typing import Callable as F
 
 
@@ -15,8 +15,10 @@ from pydantic_cli import (
 
 M = TypeVar("M", bound=BaseModel)
 
-
-class TestConfig(Generic[M]):
+# Making this name a bit odd (from TestConfig)
+# to get around Pytest complaining that
+# it can't collect the "Test"
+class HarnessConfig(Generic[M]):
     def __init__(
         self,
         model_class: Type[M],
@@ -31,7 +33,7 @@ class TestConfig(Generic[M]):
 
 
 class _TestHarness(Generic[M], unittest.TestCase):
-    CONFIG: TestConfig[M]
+    CONFIG: HarnessConfig[M]
 
     def run_config(self, args, exit_code=0):
         f = to_runner(
