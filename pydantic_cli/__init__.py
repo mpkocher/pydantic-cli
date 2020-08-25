@@ -42,6 +42,9 @@ __all__ = [
     "default_epilogue_handler",
     "DefaultConfig",
     "HAS_AUTOCOMPLETE_SUPPORT",
+    "PrologueHandlerType",
+    "EpilogueHandlerType",
+    "__version__"
 ]
 
 
