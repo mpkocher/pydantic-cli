@@ -594,3 +594,17 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 - [Pydantic has a perhaps counterintuitively model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
 - Currently **only support flat "simple" types** (e.g., floats, ints, strings, boolean). There's no current support for `List[T]` or nested dicts.
 - Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood and argparse is a bit thorny of an API to build on top of.
+
+# Other Related Tools
+
+Other tools that leverage type annotations to create CLI tools. 
+
+- [typer](https://github.com/tiangolo/typer) Layer on top of click
+- [glacier](https://github.com/relastle/glacier) Uses click internally
+- [Typed-Settings](https://gitlab.com/sscherfke/typed-settings) Attrs + click
+- [cliche](https://github.com/kootenpv/cliche) 
+- [SimpleParsing](https://github.com/lebrice/SimpleParsing) dataclasses + argparse
+- [recline](https://github.com/NetApp/recline)
+- [clippy](https://github.com/gowithfloat/clippy)
+- [clize](https://github.com/epsy/clize)
+- [plac](https://github.com/micheles/plac)
