@@ -608,3 +608,4 @@ Other tools that leverage type annotations to create CLI tools.
 - [clippy](https://github.com/gowithfloat/clippy)
 - [clize](https://github.com/epsy/clize)
 - [plac](https://github.com/micheles/plac)
+- [typedparse](https://github.com/khud/typedparse)
