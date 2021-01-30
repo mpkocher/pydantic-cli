@@ -4,6 +4,10 @@ Turn Pydantic defined Data Models into CLI Tools and enable loading values from 
 
 **Requires Pydantic** `>=1.5.1`. 
 
+[![Downloads](https://pepy.tech/badge/pydantic-cli)](https://pepy.tech/project/pydantic-cli)
+
+[![Downloads](https://pepy.tech/badge/pydantic-cli/month)](https://pepy.tech/project/pydantic-cli)
+
 ## Installation
 
 ```bash
@@ -609,3 +613,9 @@ Other tools that leverage type annotations to create CLI tools.
 - [clize](https://github.com/epsy/clize)
 - [plac](https://github.com/micheles/plac)
 - [typedparse](https://github.com/khud/typedparse)
+
+# Stats
+
+
+
+- [Github Star Growth](https://star-history.t9t.io/#mpkocher/pydantic-cli)
