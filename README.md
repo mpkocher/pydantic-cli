@@ -603,6 +603,7 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 
 Other tools that leverage type annotations to create CLI tools. 
 
+- [cyto](https://github.com/sbtinstruments/cyto) Pydantic based model leveraging Pydantic's settings sources. Supports nested values. Optional TOML support.
 - [typer](https://github.com/tiangolo/typer) Layer on top of click
 - [glacier](https://github.com/relastle/glacier) Uses click internally
 - [Typed-Settings](https://gitlab.com/sscherfke/typed-settings) Attrs + click
