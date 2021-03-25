@@ -603,20 +603,19 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 
 Other tools that leverage type annotations to create CLI tools. 
 
-- [cyto](https://github.com/sbtinstruments/cyto) Pydantic based model leveraging Pydantic's settings sources. Supports nested values. Optional TOML support.
-- [typer](https://github.com/tiangolo/typer) Layer on top of click
-- [glacier](https://github.com/relastle/glacier) Uses click internally
-- [Typed-Settings](https://gitlab.com/sscherfke/typed-settings) Attrs + click
-- [cliche](https://github.com/kootenpv/cliche) 
-- [SimpleParsing](https://github.com/lebrice/SimpleParsing) dataclasses + argparse
-- [recline](https://github.com/NetApp/recline)
-- [clippy](https://github.com/gowithfloat/clippy)
-- [clize](https://github.com/epsy/clize)
-- [plac](https://github.com/micheles/plac)
-- [typedparse](https://github.com/khud/typedparse)
+- [cyto](https://github.com/sbtinstruments/cyto) Pydantic based model leveraging Pydantic's settings sources. Supports nested values. Optional TOML support. (Leverages: click, pydantic)
+- [typer](https://github.com/tiangolo/typer) Typer is a library for building CLI applications that users will love using and developers will love creating. Based on Python 3.6+ type hints. (Leverages: click)
+- [glacier](https://github.com/relastle/glacier) Building Python CLI using docstrings and typehints (Leverages: click)
+- [Typed-Settings](https://gitlab.com/sscherfke/typed-settings) Manage typed settings with attrs classes – for server processes as well as click applications (Leverages: attrs, click)
+- [cliche](https://github.com/kootenpv/cliche) Build a simple command-line interface from your functions. (Leverages: argparse and type annotations/hints)
+- [SimpleParsing](https://github.com/lebrice/SimpleParsing) Simple, Elegant, Typed Argument Parsing with argparse. (Leverages: dataclasses, argparse)
+- [recline](https://github.com/NetApp/recline) This library helps you quickly implement an interactive command-based application in Python. (Leverages: argparse + type annotations/hints)
+- [clippy](https://github.com/gowithfloat/clippy) Clippy crawls the abstract syntax tree (AST) of a Python file and generates a simple command-line interface. 
+- [clize](https://github.com/epsy/clize) Turn Python functions into command-line interfaces (Leverages: attrs)
+- [plac](https://github.com/micheles/plac)  Parsing the Command Line the Easy Way.
+- [typedparse](https://github.com/khud/typedparse) Parser for command-line options based on type hints (Leverages: argparse and type annotations/hints)
+- [paiargparse](https://github.com/Planet-AI-GmbH/paiargparse) Extension to the python argparser allowing to automatically generate a hierarchical argument list based on dataclasses. (Leverages: argparse + dataclasses)
 
 # Stats
 
-
-
-- [Github Star Growth](https://star-history.t9t.io/#mpkocher/pydantic-cli)
+- [Github Star Growth of pydantic-cli](https://star-history.t9t.io/#mpkocher/pydantic-cli)
