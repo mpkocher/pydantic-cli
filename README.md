@@ -593,11 +593,100 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 
 # Limitations
 
-- **Positional Arguments are not supported**. This created too much friction with the JSON file loading feature which could turn positional required arguments into optional values which fundamentally could changed the commandline interface.
-- Pydantic BaseSettings to set values from `dotenv` or ENV variables. This feature of Pydantic is **not supported** in `pydantic-cli`.
-- [Pydantic has a perhaps counterintuitively model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
+- **Positional Arguments are not supported** (See more info the next subsection)
+- Pydantic BaseSettings to set values from `dotenv` or ENV variables is **not supported**. Loading `dotenv` or similar in Pydantic overlapped and competed too much with the "preset" JSON loading model in `pydantic-cli`.
+- [Pydantic has a perhaps counterintuitive model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
 - Currently **only support flat "simple" types** (e.g., floats, ints, strings, boolean). There's no current support for `List[T]` or nested dicts.
 - Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood and argparse is a bit thorny of an API to build on top of.
+
+## Why are Positional Arguments not supported?
+
+The core features of pydantic-cli are:
+
+- Define and validate models using Pydantic and use these schemas as an interface to the command line
+- Leverage `mypy` (or similar static analyzer) to enable validating/checking typesafe-ness prior to runtime
+- Load partial or complete models using JSON (these are essentially, partial or complete config or "preset" files)
+
+Positional arguments create friction points when combined with loading model values from a JSON file. More specifically, (required) positional values of the model could be supplied in the JSON and are no longer required at the command line. 
+
+For example:
+
+```python
+from pydantic import BaseModel
+from pydantic_cli import DefaultConfig
+
+class MinOptions(BaseModel):
+    class Config(DefaultConfig):
+        CLI_JSON_ENABLE = True
+    
+    input_file: str
+    input_hdf: str
+    max_records: int = 100
+```
+
+And the vanilla case running from the command line works as expected.
+
+```bash
+my-tool /path/to/file.txt /path/to/file.h5 --max_records 200
+```
+
+However, when using the JSON "preset" feature, there are potential problems where the positional arguments of the tool are shifting around depending on what fields have been defined in the JSON preset.
+
+For example, running with this `preset.json`, the `input_file` positional argument is no longer required. 
+
+```json
+{"input_file": "/system/config.txt", "max_records": 12345}
+```
+
+Vanilla case works as expected.
+
+```bash
+my-tool  file.txt /path/to/file.h5 --json-config ./preset.json
+```
+
+However, this also works as well.
+
+```bash
+my-tool  /path/to/file.h5 --json-config ./preset.json
+```
+
+In my experience, **the changing of the semantic meaning of the command line tool's positional arguments depending on the contents of the `preset.json` created issues and bugs**.
+
+The simplest fix is to remove the positional arguments in favor of `-i` or similar which removed the issue.
+
+```python
+from pydantic import BaseModel
+from pydantic_cli import run_and_exit, to_runner, DefaultConfig
+
+class MinOptions(BaseModel):
+    class Config(DefaultConfig):
+        CLI_JSON_ENABLE = True
+        CLI_EXTRA_OPTIONS = {'input_file': ('-i', ), 'input_hdf': ('-d', '--hdf'), 'max_records': ('-m', '--max-records')}
+    
+    input_file: str
+    input_hdf: str
+    max_records: int = 100
+```
+
+Running with the `preset.json` defined above, works as expected.
+
+```bash
+my-tool --hdf /path/to/file.h5 --json-config ./preset.json
+```
+
+As well as overriding the `-i`. 
+
+```bash
+my-tool -i file.txt --hdf /path/to/file.h5 --json-config ./preset.json
+```
+
+Or 
+
+```bash
+my-tool --hdf /path/to/file.h5 -i file.txt --json-config ./preset.json
+```
+
+This consistency was the motivation for removing positional argument support in earlier versions of `pydantic-cli`. 
 
 # Other Related Tools
 
