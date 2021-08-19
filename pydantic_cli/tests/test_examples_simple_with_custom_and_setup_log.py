@@ -9,7 +9,10 @@ from . import _TestHarness, HarnessConfig
 
 class TestExamples(_TestHarness[Options]):
     CONFIG = HarnessConfig(
-        Options, example_runner, epilogue=epilogue_handler, prologue=prologue_handler,
+        Options,
+        example_runner,
+        epilogue=epilogue_handler,
+        prologue=prologue_handler,
     )
 
     def test_simple_01(self):

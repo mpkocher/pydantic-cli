@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Version 3.3.0
+
+- Add support for `List` and `Set` fields by [Marius van Niekerk](https://github.com/mariusvniekerk)
+
 ## Version 3.2.0
 
 - Add support for emitting autocomplete in bash/zsh using shtab

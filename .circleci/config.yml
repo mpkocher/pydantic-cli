@@ -52,6 +52,7 @@ jobs:
             . venv/bin/activate
             pytest .
             mypy pydantic_cli
+            black --check pydantic_cli
 
       - store_artifacts:
           path: test-reports

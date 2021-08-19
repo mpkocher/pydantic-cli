@@ -48,7 +48,7 @@ class BetaOptions(BaseModel):
 
 
 def to_func(sx):
-    """ Util func to create to custom mocked funcs that be used be each subparser"""
+    """Util func to create to custom mocked funcs that be used be each subparser"""
 
     def example_runner(opts) -> int:
         print(f"Mock {sx} example running with {opts}")

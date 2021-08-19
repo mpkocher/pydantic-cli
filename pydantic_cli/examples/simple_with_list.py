@@ -8,7 +8,7 @@ and can be called
 my-tool --input_file file.fasta file2.fasta --max_records 10
 ```
 """
-from typing import List
+from typing import List, Set
 from pydantic import BaseModel
 
 from pydantic_cli import run_and_exit
@@ -16,6 +16,7 @@ from pydantic_cli import run_and_exit
 
 class Options(BaseModel):
     input_file: List[str]
+    filters: Set[str]
     max_records: int
 
 
