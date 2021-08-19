@@ -4,6 +4,7 @@ import traceback
 import logging
 import typing as T
 from typing import Callable as F
+import pydantic.fields
 
 from ._version import __version__
 
@@ -173,7 +174,7 @@ def __add_boolean_arg_to_parser(
 def _add_pydantic_field_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
-    field,
+    field: pydantic.fields.ModelField,
     override_value: T.Any = ...,
     override_cli: T.Optional[CustomOptsType] = None,
     long_prefix: str = "--",
@@ -221,6 +222,13 @@ def _add_pydantic_field_to_parser(
 
     help_doc = __to_field_description(default_value, field.type_, description)
 
+    if field.shape in {pydantic.fields.SHAPE_LIST, pydantic.fields.SHAPE_SET}:
+        shape_kwargs = {
+            "nargs": "+"
+        }
+    else:
+        shape_kwargs = {}
+
     if field.type_ == bool:
         __add_boolean_arg_to_parser(
             parser, field_id, cli_custom, default_value, is_required
@@ -232,6 +240,7 @@ def _add_pydantic_field_to_parser(
             default=default_value,
             dest=field_id,
             required=is_required,
+            **shape_kwargs,
         )
 
     return parser
