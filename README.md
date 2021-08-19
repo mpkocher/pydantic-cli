@@ -596,7 +596,7 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 - **Positional Arguments are not supported** (See more info the next subsection)
 - Pydantic BaseSettings to set values from `dotenv` or ENV variables is **not supported**. Loading `dotenv` or similar in Pydantic overlapped and competed too much with the "preset" JSON loading model in `pydantic-cli`.
 - [Pydantic has a perhaps counterintuitive model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
-- Currently **only support flat "simple" types** (e.g., floats, ints, strings, boolean). There's no current support for `List[T]` or nested dicts.
+- Currently **only support "simple" types** (e.g., floats, ints, strings, boolean) and limited support for fields defined as `List[T]` or `Set[T]`. There is **no support** for nested models.
 - Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood and argparse is a bit thorny of an API to build on top of.
 
 ## Why are Positional Arguments not supported?
