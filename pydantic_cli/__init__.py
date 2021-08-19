@@ -194,7 +194,7 @@ def _add_pydantic_field_to_parser(
     default_long_arg = "".join([long_prefix, field_id])
 
     # If a default value is provided, it's not necessarily required?
-    is_required = field.required
+    is_required = field.required is True  # required is UndefinedBool
 
     default_value = field.default
     if override_value is not NOT_PROVIDED:
@@ -223,9 +223,7 @@ def _add_pydantic_field_to_parser(
     help_doc = __to_field_description(default_value, field.type_, description)
 
     if field.shape in {pydantic.fields.SHAPE_LIST, pydantic.fields.SHAPE_SET}:
-        shape_kwargs = {
-            "nargs": "+"
-        }
+        shape_kwargs = {"nargs": "+"}
     else:
         shape_kwargs = {}
 
@@ -234,13 +232,15 @@ def _add_pydantic_field_to_parser(
             parser, field_id, cli_custom, default_value, is_required
         )
     else:
+        # MK. I don't think there's any point trying to fight with argparse to get
+        # the types correct here. It's just a mess from a type standpoint.
         parser.add_argument(
             *cli_custom,
             help=help_doc,
             default=default_value,
             dest=field_id,
             required=is_required,
-            **shape_kwargs,
+            **shape_kwargs,  # type: ignore
         )
 
     return parser
@@ -442,7 +442,11 @@ def _parser_add_arg_json_file(
     help = f"Path to configuration JSON file. Can be set using ENV VAR ({cli_config.json_config_env_var}) (default:{path})"
 
     p.add_argument(
-        field, default=path, type=validator, help=help, required=False,
+        field,
+        default=path,
+        type=validator,
+        help=help,
+        required=False,
     )
     return p
 
