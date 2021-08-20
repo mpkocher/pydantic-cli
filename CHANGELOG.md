@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Version 3.4.0
+
+- Improve support for simple `Enum`s. 
+
 ## Version 3.3.0
 
 - Add support for `List` and `Set` fields by [Marius van Niekerk](https://github.com/mariusvniekerk)
