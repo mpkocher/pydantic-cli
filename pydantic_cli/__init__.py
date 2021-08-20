@@ -3,6 +3,7 @@ import sys
 import traceback
 import logging
 import typing as T
+from enum import Enum
 from typing import Callable as F
 import pydantic.fields
 
@@ -227,6 +228,10 @@ def _add_pydantic_field_to_parser(
     else:
         shape_kwargs = {}
 
+    choices: T.Optional[T.List[T.Any]] = None
+    if issubclass(field.type_, Enum):
+        choices = [x.value for x in field.type_.__members__.values()]
+
     if field.type_ == bool:
         __add_boolean_arg_to_parser(
             parser, field_id, cli_custom, default_value, is_required
@@ -240,6 +245,7 @@ def _add_pydantic_field_to_parser(
             default=default_value,
             dest=field_id,
             required=is_required,
+            choices=choices,  # type: ignore
             **shape_kwargs,  # type: ignore
         )
 
