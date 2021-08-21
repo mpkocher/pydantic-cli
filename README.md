@@ -24,6 +24,11 @@ pip install pydantic-cli
 1. Leverage the static analyzing tool [**mypy**](http://mypy.readthedocs.io) to catch type errors in your commandline tool   
 1. Easy to test (due to reasons defined above)
 
+### Motivating Usecases
+
+- Quick scrapy commandline tools for local development (e.g., webscraper CLI tool, or CLI application that runs a training algo)
+- Internal tools driven by a Pydantic data model/schema
+- Configuration heavy tools that are driven by either partial (i.e, "presets") or complete configuration files defined using JSON
 
 ## Quick Start
 
@@ -64,7 +69,7 @@ if __name__ == '__main__':
 
 ```
 
-Or to implicitly use `sys.argv[1:]`, call can leverage `run_and_exit` (`to_runner` is also useful for testing).
+Or to implicitly use `sys.argv[1:]`, leverage `run_and_exit` (`to_runner` is also useful for testing).
 
 ```python
 if __name__ == '__main__':
@@ -72,7 +77,45 @@ if __name__ == '__main__':
 
 ```
 
+## Customizing Description and Commandline Flags
+
+Customizing the commandline flags or the description can be done by leveraging `Field` from `pydantic. See [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) more details. 
+
+**Note**, `...` in Pydantic semantically means "required" value when using in `Field`.
+
+```python
+from pydantic import BaseModel, Field
+from pydantic_cli import run_and_exit, to_runner
+
+
+class MinOptions(BaseModel):
+    input_file: str = Field(..., description="Path to Input H5 file", extras={'cli':('-i', '--input-file')})
+    max_records: int = Field(..., description="Max records to process", extras={'cli':('-m', '--max-records')})
+    debug: bool = Field(False, description="Enable debugging mode", extras={'cli': ('-d', '--debug')})
+
+    
+def example_runner(opts: MinOptions) -> int:
+    print(f"Mock example running with options {opts}")
+    return 0
+
+
+if __name__ == '__main__':
+    run_and_exit(MinOptions, example_runner, description="My Tool Description", version='0.1.0')
+```
+
 **WARNING**: Data models that have boolean values and generated CLI flags (e.g., `--enable-filter` or `--disable-filter`) require special attention. See the "Defining Boolean Flags" section for more details. 
+
+Leveraging `Field` is also useful for validating inputs. 
+
+```python
+from pydantic import BaseModel, Field
+
+
+class MinOptions(BaseModel):
+    input_file: str = Field(..., description="Path to Input H5 file", extras={'cli':('-i', '--input-file')})
+    max_records: int = Field(..., gt=0, lte=1000, description="Max records to process", extras={'cli':('-m', '--max-records')})
+
+```
 
 ## Loading Configuration using JSON
 
@@ -225,73 +268,115 @@ Found 1 error in 1 file (checked 1 source file)
 
 ## Defining Boolean Flags
 
-Boolean options in Pydantic data models require special attention. 
+There are a few common cases of boolean values:
 
-By default, when defining a model with a boolean flag, a "enable" or "disable" flag will be added depending on the default value.
+1. `x:bool = True|False` A bool field with a default value
+2. `x:bool` A required bool field
+3. `x:Optional[bool]` or `x:Optional[bool] = None` An optional boolean with a default value of None
+4. `x:Optional[bool] = Field(...)` a required boolean that can be set to `None`, `True` or `False`. 
 
-For example.
+Case 1 is very common and the semantics of the custom CLI overrides (as a tuple) **are different than the cases 2-4**. 
+
+### Boolean Field with Default
+
+As demonstrated above, the vanilla case of defining a type as `bool` with a default value work as expected.
+
+For example:
+
 
 ```python
 from pydantic import BaseModel
 
-from pydantic_cli import run_and_exit
 
-
-class Options(BaseModel):
-    input_file: str
-    run_training: bool = True
-    dry_run: bool = False
-
-
-def example_runner(opts: Options) -> int:
-    print(f"Mock example running with {opts}")
-    return 0
-
-
-if __name__ == "__main__":
-    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")
+class MinOptions(BaseModel):
+    debug: bool = False
 ```
 
-Since `run_training` has a default value of `True`, a commandline flag of `--disable-run_training` will be created. Enabling this from the commandline would set `run_training` in the Pydantic data model to `False`.
 
-Similarly, `dry_run` has a default value of `False` and a commandline flag of `--enable-dry_run` will be created. Enabling this flag will set `dry_run` to True.
+By default, when defining a model with a boolean flag, an "enable" or "disable" prefix will be added to create the commandline flag depending on the default value.
 
-The default prefixes of the boolean flags are `(--enable-, --disable-)` and can configured in the configuration of the data model.
+In this specific case, a commandline flag of `--enable-debug` which will set `debug` in the Pydantic model to `True`. 
 
-For example,
+If the default was set to `False`, then a `--disable-debug` flag would be created and would set `debug` to `False` in the Pydantic data model.
+
+The CLI flag can be customized and provided as a `Tuple[str]` or `Tuple[str, str]` as (long, ) or (short, long) flags (respectively) to negate the default value. 
+
+For example, running `-d` or `--debug` will set `debug` to `True` in the Pydantic data model.
+
+```python
+from pydantic import BaseModel, Field
+
+
+class MinOptions(BaseModel):
+    debug: bool = Field(False, description="Enable debug mode", extras={'cli':('-d', '--debug')})
+```
+
+If the default is `True`, running the below with `--disable-debug` will set `debug` to `False`.
+
+```python
+from pydantic import BaseModel, Field
+
+
+class MinOptions(BaseModel):
+    debug: bool = Field(True, description="Disable debug mode", extras={'cli':('-d', '--disable-debug')})
+```
+
+### Boolean Required Field
+
+Required boolean fields are handled a bit different than the case where a boolean is provided with a default value.
+
+Specifically, the custom flag `Tuple[str, str]` must be provided as a `(--enable, --disable)` format.
+
+```python
+from pydantic import BaseModel, Field
+
+
+class MinOptions(BaseModel):
+    debug: bool = Field(..., description="Enable/Disable debugging", extras={'cli': ('--enable-debug', '--disable-debug')})
+```
+
+### Optional Boolean Fields
+
+Similar to the required boolean fields case, `Optional[bool]` cases are handled the similar semantics.
+
+```python
+from typing import Optional
+from pydantic import BaseModel, Field
+
+
+class MinOptions(BaseModel):
+    a: Optional[bool]
+    b: Optional[bool] = None
+    c: Optional[bool] = Field(False, extras={'cli':('--enable-c', '--disable-c')})
+    d: Optional[bool] = Field(..., extras={'cli':('--enable-d', '--disable-d')})
+```
+Note, that `x:Optional[bool]` and `x:Optional[bool] = None` semantically mean the same thing in Pydantic.
+
+In each of the above cases, the custom CLI flags must be provided as (--enable, --disable) format.
+
+Also, note it isn't possible to set `None` from the commandline for the `Optional[bool] = False` or `Optional[bool] = Field(...)` case.
+
+### Customizing default Enable/Disable Bool Prefix
+
+The enable/disable prefix used for all `bool` options can be customized by setting the `Tuple[str, str]` of `CLI_BOOL_PREFIX` on `Config` to the (positive, negative) of prefix flag.
+
+The default value of `Config.CLI_BOOL_PREFIX` is `('--enable-', '--disable')`. 
+
 
 ```python
 from pydantic import BaseModel
 
-from pydantic_cli import DefaultConfig
-
 
 class Options(BaseModel):
-    class Config(DefaultConfig):
+    class Config:
         CLI_BOOL_PREFIX = ('--yes-', '--no-')
-
-    input_file: str
-    run_training: bool = True
-    dry_run: bool = False
+    
+    debug: bool = False
 ```
+This will generate an optional `--yes-debug` flag that will set `dry_run` from the default (`False`) to `True` in the Pydantic data model.
 
-Similar to the non-boolean flags, the custom CLI options can be set. However, there's an important difference.
+In many cases, **it's best to customize the commandline boolean flags** to avoid ambiguities or confusion.
 
-**Custom Boolean flags must be configured with BOTH True and False values** with a type of `Tuple[str, str]`. 
-
-For example,
-
-
-```python
-from pydantic import BaseModel
-from pydantic_cli import DefaultConfig
-
-class Opts(BaseModel):
-    class Config(DefaultConfig):
-        CLI_EXTRA_OPTIONS = {'dry_run': ('--enable-dry-run', '--no-dry-run')}
-
-    dry_run: bool = False
-```
 
 ## Customization and Hooks
 
@@ -302,76 +387,6 @@ For customization of the CLI args, such as max number of records is `-m 1234` in
 
 - The first is the **quick** method that is a minor change to the core `Config` of the Pydantic Data model. 
 - The second method is use Pydantic's "Field" metadata model is to define richer set of metadata. See [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) more details. 
-
-
-### Customization using Quick Model
-
-We're going to change the usage from `my-tool --input_file /path/to/file.txt --max_records 1234` to `my-tool -i /path/to/file.txt -m 1234` using the "quick" method by customizing the Pydantic data model "Config".
-
-This only requires adding  `CLI_EXTRA_OPTIONS` to the Pydantic `Config`.
-
-```python
-from pydantic import BaseModel
-
-class MinOptions(BaseModel):
-
-    class Config:
-        CLI_EXTRA_OPTIONS = {'input_file': ('-i,), 'max_records': ('-m', ) }
-
-    input_file: str
-    max_records: int = 10
-
-```
-
-You can also override the "long" argument. However, **note this is starting to add a new layer of indirection** on top of the fields defined in the Pydantic model. For example, 'max_records' maps to '--max-records' at the commandline interface and perhaps might create annoying inconsistencies.
-
-
-```python
-from pydantic import BaseModel
-
-class MinOptions(BaseModel):
-
-    class Config:
-        CLI_EXTRA_OPTIONS = {'input_file': ('-i, '), 'max_records': ('-m', '--max-records')}
-
-    input_file: str
-    max_records: int = 10
-
-```
-
-
-### Customization using Quick Model using Schema Driven Approach using Pydantic Field
-
-
-```python
-from pydantic import BaseModel, Field
-
-
-class Options(BaseModel):
-
-    class Config:
-        validate_all = True
-        validate_assignment = True
-
-    input_file: str = Field(
-        ..., # this implicitly means required=True
-        title="Input File",
-        description="Path to the input file",
-        required=True,
-        extras={"cli": ('-f', '--input-file')}
-    )
-
-    max_records: int = Field(
-        123,
-        title="Max Records",
-        description="Max number of records to process",
-        gt=0,
-        extras={'cli': ('-m', '--max-records')}
-    )
-
-```
-
-This will metadata (e.g., title, description) will be communicated in the `--help` of the commandline tool.
 
 
 ## Hooks into the CLI Execution
@@ -392,17 +407,13 @@ For example:
 ```python
 import sys
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_cli import run_and_exit
 
 
 class MinOptions(BaseModel):
-
-    class Config:
-        CLI_EXTRA_OPTIONS = {'input_file': ('-i, '), 'max_records': ('-m', '--max-records')}
-
-    input_file: str
-    max_records: int = 10
+    input_file: str = Field(..., extras={'cli':('-i',)})
+    max_records: int = Field(10, extras={'cli':('-m', '--max-records')})
 
 
 def example_runner(opts: MinOptions) -> int:
@@ -462,31 +473,20 @@ Defining a subparser to your commandline tool is enabled by creating a container
 
 ```python
 import typing as T
-from pydantic import BaseModel, AnyUrl
+from pydantic import BaseModel, AnyUrl, Field
 
 
-
-from pydantic_cli.examples import ExampleConfigDefaults
 from pydantic_cli import run_sp_and_exit, SubParser
 
 
 class AlphaOptions(BaseModel):
-
-    class Config(ExampleConfigDefaults):
-        CLI_EXTRA_OPTIONS = {'max_records': ('-m', '--max-records')}
-
-    input_file: str
-    max_records: int = 10
+    input_file: str = Field(..., extras={'cli':('-i',)})
+    max_records: int = Field(10, extras={'cli':('-m', '--max-records')})
 
 
 class BetaOptions(BaseModel):
-
-    class Config(ExampleConfigDefaults):
-        CLI_EXTRA_OPTIONS = {'url': ('-u', '--url'),
-                             'num_retries': ('-n', '--num-retries')}
-
-    url: AnyUrl
-    num_retries: int = 3
+    url: AnyUrl = Field(..., extras={'cli':('-u', '--url')})
+    num_retries: int = Field(3, extras={'cli':('-n', '--num-retries')})
 
 
 def printer_runner(opts: T.Any):
@@ -518,6 +518,7 @@ Pydantic-cli attempts to stylistically follow Pydantic's approach using a class 
 
 ```python
 import typing as T
+from pydantic_cli import CustomOptsType
 
 class DefaultConfig:
     """
@@ -655,17 +656,16 @@ In my experience, **the changing of the semantic meaning of the command line too
 The simplest fix is to remove the positional arguments in favor of `-i` or similar which removed the issue.
 
 ```python
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_cli import run_and_exit, to_runner, DefaultConfig
 
 class MinOptions(BaseModel):
     class Config(DefaultConfig):
         CLI_JSON_ENABLE = True
-        CLI_EXTRA_OPTIONS = {'input_file': ('-i', ), 'input_hdf': ('-d', '--hdf'), 'max_records': ('-m', '--max-records')}
     
-    input_file: str
-    input_hdf: str
-    max_records: int = 100
+    input_file: str = Field(..., extras={'cli':('-i', )})
+    input_hdf: str = Field(..., extras={'cli':('-d', '--hdf')})
+    max_records: int = Field(100, extras={'cli':('-m', '--max-records')})
 ```
 
 Running with the `preset.json` defined above, works as expected.
