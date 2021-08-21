@@ -229,8 +229,11 @@ def _add_pydantic_field_to_parser(
         shape_kwargs = {}
 
     choices: T.Optional[T.List[T.Any]] = None
-    if issubclass(field.type_, Enum):
-        choices = [x.value for x in field.type_.__members__.values()]
+    try:
+        if issubclass(field.type_, Enum):
+            choices = [x.value for x in field.type_.__members__.values()]
+    except TypeError:
+        pass
 
     if field.type_ == bool:
         __add_boolean_arg_to_parser(
