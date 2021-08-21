@@ -18,6 +18,7 @@ CLI_EXTRA_OPTIONS = {"max_records": ('-m', '--max-records')}
 """
 import sys
 import logging
+from typing import Union
 
 from pydantic import BaseModel
 
@@ -39,6 +40,7 @@ class Options(BaseModel):
     input_file: str
     min_filter_score: float
     max_records: int = 10
+    alpha: Union[int, str] = 1
 
 
 def example_runner(opts: Options) -> int:
