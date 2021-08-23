@@ -60,7 +60,7 @@ class Options(BaseModel):
     # pydantic-cli doesn't have a good mechanism for declaring this 3-state value of None, True, False.
     # using a boolean commandline flag (e.g., --enable-logging, or --disable-logging)
     zeta_mode: Optional[bool] = Field(
-        ..., description="Enable Zeta mode to experimental filtering mode."
+        ..., description="Enable/Disable Zeta mode to experimental filtering mode."
     )
 
     # this a bit of a contradiction from the commandline perspective. A "optional" value
