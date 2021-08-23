@@ -15,7 +15,7 @@ is called.
 import sys
 import logging
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pydantic_cli import __version__
 from pydantic_cli import run_and_exit
@@ -26,14 +26,10 @@ log = logging.getLogger(__name__)
 
 class Options(BaseModel):
     class Config(ExampleConfigDefaults):
-        CLI_EXTRA_OPTIONS = {
-            "max_records": ("-m",),
-            "log_level": ("-l",),
-            "input_file": ("-i",),
-        }
+        pass
 
-    input_file: str
-    max_records: int = 10
+    input_file: str = Field(..., extras={"cli": ("-i", "--input")})
+    max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
     # this leverages Pydantic's fundamental understanding of Enums
     log_level: LogLevel = LogLevel.INFO
 
