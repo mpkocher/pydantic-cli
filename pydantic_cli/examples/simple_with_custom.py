@@ -1,26 +1,8 @@
-"""
-Example using pydantic-cli to generate a custom CLI fields on a per field basis
-using the "quick" method.
-
-The Pydantic Config can be used to override custom fields
-For example, `CLI_EXTRA_OPTIONS` dict can be set to the
-short and/or long argument form.
-
-Set the value in the dict `-m` to add a "short" arg (the long default form will also be
-automatically added).
-
-CLI_EXTRA_OPTIONS = {"max_records": ('-m', )}
-
-Or
-
-CLI_EXTRA_OPTIONS = {"max_records": ('-m', '--max-records')}
-
-"""
 import sys
 import logging
 from typing import Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from pydantic_cli import __version__
 from pydantic_cli import run_and_exit, DefaultConfig
@@ -31,15 +13,11 @@ log = logging.getLogger(__name__)
 
 class Options(BaseModel):
     class Config(ExampleConfigDefaults, DefaultConfig):
-        CLI_EXTRA_OPTIONS = {
-            "max_records": ("-m",),
-            "min_filter_score": ("-f",),
-            "input_file": ("-i",),
-        }
+        pass
 
-    input_file: str
-    min_filter_score: float
-    max_records: int = 10
+    input_file: str = Field(..., extras={"cli": ("-i", "--input")})
+    max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
+    min_filter_score: float = Field(..., extras={"cli": ("-f", "--filter-score")})
     alpha: Union[int, str] = 1
 
 

@@ -12,7 +12,7 @@ my-tool beta --help
 import sys
 import logging
 import typing as T
-from pydantic import BaseModel, AnyUrl
+from pydantic import BaseModel, AnyUrl, Field
 
 from pydantic_cli.examples import ExampleConfigDefaults, LogLevel, prologue_handler
 from pydantic_cli import run_sp_and_exit, SubParser
@@ -20,30 +20,25 @@ from pydantic_cli import run_sp_and_exit, SubParser
 log = logging.getLogger(__name__)
 
 
-class AlphaOptions(BaseModel):
-    class Config(ExampleConfigDefaults):
-        CLI_EXTRA_OPTIONS = {
-            "max_records": ("-m", "--max-records"),
-            "input_file": ("-i",),
-        }
-        CLI_JSON_ENABLE = True
+class CustomConfig(ExampleConfigDefaults):
+    CLI_JSON_ENABLE = True
 
-    input_file: str
-    max_records: int = 10
+
+class AlphaOptions(BaseModel):
+    class Config(CustomConfig):
+        pass
+
+    input_file: str = Field(..., extras={"cli": ("-i", "--input")})
+    max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
     log_level: LogLevel = LogLevel.DEBUG
 
 
 class BetaOptions(BaseModel):
-    class Config(ExampleConfigDefaults):
-        CLI_EXTRA_OPTIONS = {
-            "url": ("-u", "--url"),
-            "num_retries": ("-n", "--num-retries"),
-            "input_file": ("-i",),
-        }
-        CLI_JSON_ENABLE = True
+    class Config(CustomConfig):
+        pass
 
-    url: AnyUrl
-    num_retries: int = 3
+    url: AnyUrl = Field(..., extras={"cli": ("-u", "--url")})
+    num_retries: int = Field(3, extras={"cli": ("-n", "--num-retries")})
     log_level: LogLevel = LogLevel.INFO
 
 

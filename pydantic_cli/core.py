@@ -34,6 +34,7 @@ class DefaultConfig:
     # Can be used to override custom fields
     # e.g., {"max_records": ('-m', '--max-records')}
     # or {"max_records": ('-m', )}
+    # ****** THIS SHOULD NO LONGER BE USED **** Use pydantic.Field.
     CLI_EXTRA_OPTIONS: T.Dict[str, CustomOptsType] = {}
 
     # Customize the default prefix that is generated

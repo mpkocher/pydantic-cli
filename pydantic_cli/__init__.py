@@ -68,31 +68,43 @@ class SubParser(T.Generic[M]):
         return "<{k} func:{f} >".format(**d)
 
 
-def __try_to_pretty_type(prefix, field_type) -> str:
+def __try_to_pretty_type(field_type, allow_none: bool) -> str:
     """
     This is a marginal improvement to get the types to be
     displayed in slightly better format.
 
     FIXME. This needs to be display Union types better.
     """
+    prefix = "Optional[" if allow_none else ""
+    suffix = "]" if allow_none else ""
     try:
-        sx = field_type.__name__
-        return f"{prefix}:{sx}"
+        name = field_type.__name__
     except AttributeError:
-        return f"{field_type}"
+        name = repr(field_type)
+    return "".join(["type:", prefix, name, suffix])
 
 
-def __to_field_description(
-    default_value=NOT_PROVIDED, field_type=NOT_PROVIDED, description=None
+def __to_type_description(
+    default_value=NOT_PROVIDED,
+    field_type=NOT_PROVIDED,
+    allow_none: bool = False,
+    is_required: bool = False,
 ):
-    desc = "" if description is None else description
-    t = "" if field_type is NOT_PROVIDED else __try_to_pretty_type("type", field_type)
-    v = "" if default_value is NOT_PROVIDED else f"default:{default_value}"
-    if not (t + v):
-        xs = "".join([t, v])
-    else:
-        xs = " ".join([t, v])
-    return f"{desc} ({xs})"
+    t = (
+        ""
+        if field_type is NOT_PROVIDED
+        else __try_to_pretty_type(field_type, allow_none)
+    )
+    # FIXME Pydantic has a very odd default of None, which makes often can make the
+    # the "default" is actually None, or is not None
+    allowed_defaults: T.Set[T.Any] = (
+        {NOT_PROVIDED} if allow_none else {NOT_PROVIDED, None}
+    )
+    v = "" if default_value in allowed_defaults else f"default:{default_value}"
+    required = " required=True" if is_required else ""
+    sep = " " if v else ""
+    xs = sep.join([t, v]) + required
+    return xs
 
 
 def __process_tuple(
@@ -116,7 +128,7 @@ def __process_tuple(
         else:
             # this is the positional only case
             return (first,)
-    elif len(lx) == 2:
+    elif nx == 2:
         # the explicit form is provided
         return lx[0], lx[1]
     else:
@@ -125,12 +137,35 @@ def __process_tuple(
         )
 
 
+def __add_boolean_arg_negate_to_parser(
+    parser: CustomArgumentParser,
+    field_id: str,
+    cli_custom: CustomOptsType,
+    default_value: bool,
+    type_doc: str,
+    description: T.Optional[str],
+) -> CustomArgumentParser:
+    dx = {True: "store_true", False: "store_false"}
+    desc = description or ""
+    help_doc = f"{desc} ({type_doc})"
+    parser.add_argument(
+        *cli_custom,
+        action=dx[not default_value],
+        dest=field_id,
+        default=default_value,
+        help=help_doc,
+    )
+    return parser
+
+
 def __add_boolean_arg_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
     cli_custom: CustomOptsType,
     default_value: bool,
     is_required: bool,
+    type_doc: str,
+    description: T.Optional[str],
 ) -> CustomArgumentParser:
     # Overall this is a bit messy to add a boolean flag.
 
@@ -157,10 +192,11 @@ def __add_boolean_arg_to_parser(
 
         for k, (bool_, store_bool) in zip(cli_custom, bool_datum):
             if bool_ != default_value:
-                help_ = f"Set {field_id} to {bool_}"
+                desc = description or f"Set {field_id} to {bool_}."
+                help_doc = f"{desc} ({type_doc})"
                 group.add_argument(
                     k,
-                    help=help_,
+                    help=help_doc,
                     action=store_bool,
                     default=default_value,
                     dest=field_id,
@@ -202,6 +238,24 @@ def _add_pydantic_field_to_parser(
         default_value = override_value
         is_required = False
 
+    # The bool cases require some attention
+    # Cases
+    # 1. x:bool = False|True
+    # 2. x:bool
+    # 3  x:Optional[bool]
+    # 4  x:Optional[bool] = None
+    # 5  x:Optional[bool] = Field(...)
+    # 6  x:Optional[bool] = True|False
+
+    # cases 2-6 are handled in the same way with (--enable-X, --disable-X) semantics
+    # case 5 has limitations because you can't set None from the commandline
+    # case 1 is a very common cases and the provided CLI custom flags have a different semantic meaning
+    # to negate the default value. E.g., debug:bool = False, will generate a CLI flag of
+    # --enable-debug to set the value to True. Very common to set this to (-d, --debug) to True
+    is_bool_with_non_null_default = all(
+        (not is_required, not field.allow_none, default_value in {True, False})
+    )
+
     try:
         # cli_custom Should be a tuple2[Str, Str]
         cli_custom: CustomOptsType = __process_tuple(
@@ -210,18 +264,25 @@ def _add_pydantic_field_to_parser(
     except KeyError:
         if override_cli is None:
             if field.type_ == bool:
-                cli_custom = (
-                    f"{bool_prefix[0]}{field_id}",
-                    f"{bool_prefix[1]}{field_id}",
-                )
+                if is_bool_with_non_null_default:
+                    # flipped to negate
+                    prefix = {True: bool_prefix[1], False: bool_prefix[0]}
+                    cli_custom = (f"{prefix[default_value]}{field_id}",)
+                else:
+                    cli_custom = (
+                        f"{bool_prefix[0]}{field_id}",
+                        f"{bool_prefix[1]}{field_id}",
+                    )
             else:
                 cli_custom = (default_long_arg,)
         else:
             cli_custom = __process_tuple(override_cli, default_long_arg)
 
-    # log.debug(f"Creating Argument Field={field_id} opts:{cli_custom}, default={default_value} type={field.type_} required={is_required} dest={field_id}")
+    # log.debug(f"Creating Argument Field={field_id} opts:{cli_custom}, allow_none={field.allow_none} default={default_value} type={field.type_} required={is_required} dest={field_id} desc={description}")
 
-    help_doc = __to_field_description(default_value, field.type_, description)
+    type_desc = __to_type_description(
+        default_value, field.type_, field.allow_none, is_required
+    )
 
     if field.shape in {pydantic.fields.SHAPE_LIST, pydantic.fields.SHAPE_SET}:
         shape_kwargs = {"nargs": "+"}
@@ -236,15 +297,30 @@ def _add_pydantic_field_to_parser(
         pass
 
     if field.type_ == bool:
-        __add_boolean_arg_to_parser(
-            parser, field_id, cli_custom, default_value, is_required
-        )
+        # see comments above
+        # case #1 and has different semantic meaning with how the tuple[str,str] is
+        # interpreted and added to the parser
+        if is_bool_with_non_null_default:
+            __add_boolean_arg_negate_to_parser(
+                parser, field_id, cli_custom, default_value, type_desc, description
+            )
+        else:
+            __add_boolean_arg_to_parser(
+                parser,
+                field_id,
+                cli_custom,
+                default_value,
+                is_required,
+                type_desc,
+                description,
+            )
     else:
         # MK. I don't think there's any point trying to fight with argparse to get
         # the types correct here. It's just a mess from a type standpoint.
+        desc = description or ""
         parser.add_argument(
             *cli_custom,
-            help=help_doc,
+            help=f"{desc} ({type_desc})",
             default=default_value,
             dest=field_id,
             required=is_required,
