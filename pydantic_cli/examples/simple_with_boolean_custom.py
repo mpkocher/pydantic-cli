@@ -17,6 +17,9 @@ class State(str, Enum):
 
 
 class Options(BaseModel):
+    class Config(DefaultConfig):
+        pass
+
     # Simple Arg/Option can be added and a reasonable commandline "long" flag will be created.
     input_file: str
 
@@ -33,30 +36,30 @@ class Options(BaseModel):
     # Pydantic has a bit of an odd model on how it treats Optional[T]
     # These end up being indistinguishable.
     outfile: Optional[str]
-    outfile2: Optional[str] = None
+    fasta: Optional[str] = None
     # This is a "required" value that can be set to None, or str
-    outfile3: Optional[str] = Field(...)
+    report_json: Optional[str] = Field(...)
 
     # Required Boolean options/flag can be added by
-    enable_alpha: bool
+    alpha: bool
 
     # When specifying custom descriptions or flags as a pydantic Field, the flags should be specified as:
     # (short, long) or (long, ) and be the OPPOSITE of the default value provide
-    enable_beta: bool = Field(
+    beta_filter: bool = Field(
         False,
         description="Enable beta filter mode",
         extras={"cli": ("-b", "--beta-filter")},
     )
 
     # Again, note Pydantic will treat these as indistinguishable
-    enable_gamma: Optional[bool]
-    enable_delta: Optional[bool] = None
+    gamma: Optional[bool]
+    delta: Optional[bool] = None
 
     # You need to set this to ... to declare it as "Required". The pydantic docs recommend using
     # Field(...) instead of ... to avoid issues with mypy.
     # pydantic-cli doesn't have a good mechanism for declaring this 3-state value of None, True, False.
     # using a boolean commandline flag (e.g., --enable-logging, or --disable-logging)
-    enable_zeta: Optional[bool] = Field(
+    zeta_mode: Optional[bool] = Field(
         ..., description="Enable Zeta mode to experimental filtering mode."
     )
 
@@ -76,9 +79,6 @@ class Options(BaseModel):
     # This should be Union[int, str], but even with case,
     # there's an ambiguity. "1" will be cast to an int, which might not be the desired/expected results
     filter_mode: Union[str, int]
-
-    class Config(DefaultConfig):
-        pass
 
 
 def example_runner(opts: Options) -> int:
