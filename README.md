@@ -79,13 +79,15 @@ if __name__ == '__main__':
 
 ## Customizing Description and Commandline Flags
 
-Customizing the commandline flags or the description can be done by leveraging `Field` from `pydantic. See [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) more details. 
+If the Pydantic data model fields are reasonable well named (e.g., 'min_score', or 'max_records'), this can yield a good enough description when `--help` is called. 
 
-**Note**, `...` in Pydantic semantically means "required" value when using in `Field`.
+Customizing the commandline flags or the description can be done by leveraging  `description` keyword argument in `Field` from `pydantic`. See [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) more details. 
+
+**Note**, Pydantic interprets `...` as a "required" value when used in `Field`.
 
 ```python
 from pydantic import BaseModel, Field
-from pydantic_cli import run_and_exit, to_runner
+from pydantic_cli import run_and_exit
 
 
 class MinOptions(BaseModel):
@@ -273,13 +275,14 @@ There are a few common cases of boolean values:
 1. `x:bool = True|False` A bool field with a default value
 2. `x:bool` A required bool field
 3. `x:Optional[bool]` or `x:Optional[bool] = None` An optional boolean with a default value of None
-4. `x:Optional[bool] = Field(...)` a required boolean that can be set to `None`, `True` or `False`. 
+4. `x:Optional[bool] = Field(...)` a required boolean that can be set to `None`, `True` or `False` in Pydantic.
 
-Case 1 is very common and the semantics of the custom CLI overrides (as a tuple) **are different than the cases 2-4**. 
+Case 1 is very common and the semantics of the custom CLI overrides (as a tuple) **are different than the cases 2-4**.
+Case 4 has limitations. It isn't possible to set `None` from the commandline when the default is `True` or `False`.
 
 ### Boolean Field with Default
 
-As demonstrated above, the vanilla case of defining a type as `bool` with a default value work as expected.
+As demonstrated in a previous example, the common case of defining a type as `bool` with a default value work as expected.
 
 For example:
 
@@ -311,7 +314,7 @@ class MinOptions(BaseModel):
     debug: bool = Field(False, description="Enable debug mode", extras={'cli':('-d', '--debug')})
 ```
 
-If the default is `True`, running the below with `--disable-debug` will set `debug` to `False`.
+If the default is `True`, running the example below with `--disable-debug` will set `debug` to `False`.
 
 ```python
 from pydantic import BaseModel, Field
@@ -323,7 +326,7 @@ class MinOptions(BaseModel):
 
 ### Boolean Required Field
 
-Required boolean fields are handled a bit different than the case where a boolean is provided with a default value.
+Required boolean fields are handled a bit different than cases where a boolean is provided with a default value.
 
 Specifically, the custom flag `Tuple[str, str]` must be provided as a `(--enable, --disable)` format.
 
@@ -334,10 +337,11 @@ from pydantic import BaseModel, Field
 class MinOptions(BaseModel):
     debug: bool = Field(..., description="Enable/Disable debugging", extras={'cli': ('--enable-debug', '--disable-debug')})
 ```
+**Currently, supplying the short form of each "enable" and "disable" is not supported**. 
 
 ### Optional Boolean Fields
 
-Similar to the required boolean fields case, `Optional[bool]` cases are handled the similar semantics.
+Similar to the required boolean fields case, `Optional[bool]` cases have the same (--enable, --disable) semantics.
 
 ```python
 from typing import Optional
@@ -347,12 +351,13 @@ from pydantic import BaseModel, Field
 class MinOptions(BaseModel):
     a: Optional[bool]
     b: Optional[bool] = None
-    c: Optional[bool] = Field(False, extras={'cli':('--enable-c', '--disable-c')})
-    d: Optional[bool] = Field(..., extras={'cli':('--enable-d', '--disable-d')})
+    c: Optional[bool] = Field(None, extras={'cli': ('--yes-c', '--no-c')})
+    d: Optional[bool] = Field(False, extras={'cli':('--enable-d', '--disable-d')})
+    e: Optional[bool] = Field(..., extras={'cli':('--enable-e', '--disable-e')})
 ```
-Note, that `x:Optional[bool]` and `x:Optional[bool] = None` semantically mean the same thing in Pydantic.
+Note, that `x:Optional[bool]`, `x:Optional[bool] = None`, `x:Optional[bool] = Field(None)` semantically mean the same thing in Pydantic.
 
-In each of the above cases, the custom CLI flags must be provided as (--enable, --disable) format.
+In each of the above cases, the **custom CLI flags must be provided as (--enable, --disable) format**.
 
 Also, note it isn't possible to set `None` from the commandline for the `Optional[bool] = False` or `Optional[bool] = Field(...)` case.
 
@@ -373,7 +378,7 @@ class Options(BaseModel):
     
     debug: bool = False
 ```
-This will generate an optional `--yes-debug` flag that will set `dry_run` from the default (`False`) to `True` in the Pydantic data model.
+This will generate an optional `--yes-debug` flag that will set `debug` from the default (`False`) to `True` in the Pydantic data model.
 
 In many cases, **it's best to customize the commandline boolean flags** to avoid ambiguities or confusion.
 
@@ -537,11 +542,6 @@ class DefaultConfig:
     # If a default path is provided or provided from the commandline
     CLI_JSON_VALIDATE_PATH: bool = True
 
-    # Can be used to override custom fields
-    # e.g., {"max_records": ('-m', '--max-records')}
-    # or {"max_records": ('-m', )}
-    CLI_EXTRA_OPTIONS: T.Dict[str, CustomOptsType] = {}
-
     # Customize the default prefix that is generated
     # if a boolean flag is provided. Boolean custom CLI
     # MUST be provided as Tuple[str, str]
@@ -594,11 +594,11 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 
 # Limitations
 
-- **Positional Arguments are not supported** (See more info the next subsection)
-- Pydantic BaseSettings to set values from `dotenv` or ENV variables is **not supported**. Loading `dotenv` or similar in Pydantic overlapped and competed too much with the "preset" JSON loading model in `pydantic-cli`.
-- [Pydantic has a perhaps counterintuitive model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield suprising commandline args generated from the Pydantic data model. 
-- Currently **only support "simple" types** (e.g., floats, ints, strings, boolean) and limited support for fields defined as `List[T]` or `Set[T]`. There is **no support** for nested models.
-- Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood and argparse is a bit thorny of an API to build on top of.
+- **Positional Arguments are not supported** (See more info in the next subsection)
+- Using Pydantic BaseSettings to set values from `dotenv` or ENV variables is **not supported**. Loading `dotenv` or similar in Pydantic overlapped and competed too much with the "preset" JSON loading model in `pydantic-cli`.
+- [Pydantic has a perhaps counterintuitive model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield surprising commandline args generated from the Pydantic data model. 
+- Currently **only support "simple" types** (e.g., floats, ints, strings, boolean) and limited support for fields defined as `List[T]`, `Set[T]` and simple `Enum`s. There is **no support** for nested models.
+- Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood (argparse is a bit thorny of an API to build on top of).
 
 ## Why are Positional Arguments not supported?
 
@@ -608,7 +608,7 @@ The core features of pydantic-cli are:
 - Leverage `mypy` (or similar static analyzer) to enable validating/checking typesafe-ness prior to runtime
 - Load partial or complete models using JSON (these are essentially, partial or complete config or "preset" files)
 
-Positional arguments create friction points when combined with loading model values from a JSON file. More specifically, (required) positional values of the model could be supplied in the JSON and are no longer required at the command line. 
+Positional arguments create friction points when combined with loading model values from a JSON file. More specifically, (required) positional values of the model could be supplied in the JSON and are no longer required at the command line. This can fundamentally change the commandline interface and create ambiguities/bugs.
 
 For example:
 
