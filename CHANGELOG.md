@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Version 4.0.0
+
+- Backward incompatible change for semantics of boolean options
+- `Field` should be used instead of Config.CLI_EXTRA_OPTIONS
+
 ## Version 3.4.0
 
 - Improve support for simple `Enum`s. 
