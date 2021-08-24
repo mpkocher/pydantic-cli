@@ -1,6 +1,6 @@
 import sys
 import logging
-from typing import Union
+from typing import Union, List
 
 from pydantic import BaseModel, Field
 
@@ -19,6 +19,7 @@ class Options(BaseModel):
     max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
     min_filter_score: float = Field(..., extras={"cli": ("-f", "--filter-score")})
     alpha: Union[int, str] = 1
+    values: List[str] = ["a", "b", "c"]
 
 
 def example_runner(opts: Options) -> int:
