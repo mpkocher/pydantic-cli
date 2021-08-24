@@ -101,7 +101,11 @@ def __to_type_description(
     allowed_defaults: T.List[T.Any] = (
         [NOT_PROVIDED] if allow_none else [NOT_PROVIDED, None]
     )
-    v = "" if any((default_value is x) for x in allowed_defaults) else f"default:{default_value}"
+    v = (
+        ""
+        if any((default_value is x) for x in allowed_defaults)
+        else f"default:{default_value}"
+    )
     required = " required=True" if is_required else ""
     sep = " " if v else ""
     xs = sep.join([t, v]) + required
@@ -255,7 +259,11 @@ def _add_pydantic_field_to_parser(
     # --enable-debug to set the value to True. Very common to set this to (-d, --debug) to True
     # avoid using in with a Set {True,False} to avoid assumptions that default_value is hashable
     is_bool_with_non_null_default = all(
-        (not is_required, not field.allow_none, default_value is True or default_value is False)
+        (
+            not is_required,
+            not field.allow_none,
+            default_value is True or default_value is False,
+        )
     )
 
     try:
