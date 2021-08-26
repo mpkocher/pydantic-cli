@@ -83,6 +83,8 @@ If the Pydantic data model fields are reasonable well named (e.g., 'min_score', 
 
 Customizing the commandline flags or the description can be done by leveraging  `description` keyword argument in `Field` from `pydantic`. See [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) more details. 
 
+Custom 'short' or 'long' forms of the commandline args can be provided by using a `Tuple[str]` or `Tuple2[str, str]`. For example, `cli=('-m', '--max-records')` or `cli=('--max-records',)`.
+
 **Note**, Pydantic interprets `...` as a "required" value when used in `Field`.
 
 ```python
@@ -91,9 +93,9 @@ from pydantic_cli import run_and_exit
 
 
 class MinOptions(BaseModel):
-    input_file: str = Field(..., description="Path to Input H5 file", extras={'cli':('-i', '--input-file')})
-    max_records: int = Field(..., description="Max records to process", extras={'cli':('-m', '--max-records')})
-    debug: bool = Field(False, description="Enable debugging mode", extras={'cli': ('-d', '--debug')})
+    input_file: str = Field(..., description="Path to Input H5 file", cli=('-i', '--input-file'))
+    max_records: int = Field(..., description="Max records to process", cli=('-m', '--max-records'))
+    debug: bool = Field(False, description="Enable debugging mode", cli= ('-d', '--debug'))
 
     
 def example_runner(opts: MinOptions) -> int:
@@ -114,8 +116,8 @@ from pydantic import BaseModel, Field
 
 
 class MinOptions(BaseModel):
-    input_file: str = Field(..., description="Path to Input H5 file", extras={'cli':('-i', '--input-file')})
-    max_records: int = Field(..., gt=0, lte=1000, description="Max records to process", extras={'cli':('-m', '--max-records')})
+    input_file: str = Field(..., description="Path to Input H5 file", cli=('-i', '--input-file'))
+    max_records: int = Field(..., gt=0, lte=1000, description="Max records to process", cli=('-m', '--max-records'))
 
 ```
 
@@ -311,7 +313,7 @@ from pydantic import BaseModel, Field
 
 
 class MinOptions(BaseModel):
-    debug: bool = Field(False, description="Enable debug mode", extras={'cli':('-d', '--debug')})
+    debug: bool = Field(False, description="Enable debug mode", cli=('-d', '--debug'))
 ```
 
 If the default is `True`, running the example below with `--disable-debug` will set `debug` to `False`.
@@ -321,7 +323,7 @@ from pydantic import BaseModel, Field
 
 
 class MinOptions(BaseModel):
-    debug: bool = Field(True, description="Disable debug mode", extras={'cli':('-d', '--disable-debug')})
+    debug: bool = Field(True, description="Disable debug mode", cli=('-d', '--disable-debug'))
 ```
 
 ### Boolean Required Field
@@ -335,7 +337,7 @@ from pydantic import BaseModel, Field
 
 
 class MinOptions(BaseModel):
-    debug: bool = Field(..., description="Enable/Disable debugging", extras={'cli': ('--enable-debug', '--disable-debug')})
+    debug: bool = Field(..., description="Enable/Disable debugging", cli= ('--enable-debug', '--disable-debug'))
 ```
 **Currently, supplying the short form of each "enable" and "disable" is not supported**. 
 
@@ -351,9 +353,9 @@ from pydantic import BaseModel, Field
 class MinOptions(BaseModel):
     a: Optional[bool]
     b: Optional[bool] = None
-    c: Optional[bool] = Field(None, extras={'cli': ('--yes-c', '--no-c')})
-    d: Optional[bool] = Field(False, extras={'cli':('--enable-d', '--disable-d')})
-    e: Optional[bool] = Field(..., extras={'cli':('--enable-e', '--disable-e')})
+    c: Optional[bool] = Field(None, cli= ('--yes-c', '--no-c'))
+    d: Optional[bool] = Field(False, cli=('--enable-d', '--disable-d'))
+    e: Optional[bool] = Field(..., cli=('--enable-e', '--disable-e'))
 ```
 Note, that `x:Optional[bool]`, `x:Optional[bool] = None`, `x:Optional[bool] = Field(None)` semantically mean the same thing in Pydantic.
 
@@ -417,8 +419,8 @@ from pydantic_cli import run_and_exit
 
 
 class MinOptions(BaseModel):
-    input_file: str = Field(..., extras={'cli':('-i',)})
-    max_records: int = Field(10, extras={'cli':('-m', '--max-records')})
+    input_file: str = Field(..., cli=('-i',))
+    max_records: int = Field(10, cli=('-m', '--max-records'))
 
 
 def example_runner(opts: MinOptions) -> int:
@@ -485,13 +487,13 @@ from pydantic_cli import run_sp_and_exit, SubParser
 
 
 class AlphaOptions(BaseModel):
-    input_file: str = Field(..., extras={'cli':('-i',)})
-    max_records: int = Field(10, extras={'cli':('-m', '--max-records')})
+    input_file: str = Field(..., cli=('-i',))
+    max_records: int = Field(10, cli=('-m', '--max-records'))
 
 
 class BetaOptions(BaseModel):
-    url: AnyUrl = Field(..., extras={'cli':('-u', '--url')})
-    num_retries: int = Field(3, extras={'cli':('-n', '--num-retries')})
+    url: AnyUrl = Field(..., cli=('-u', '--url'))
+    num_retries: int = Field(3, cli=('-n', '--num-retries'))
 
 
 def printer_runner(opts: T.Any):
@@ -663,9 +665,9 @@ class MinOptions(BaseModel):
     class Config(DefaultConfig):
         CLI_JSON_ENABLE = True
     
-    input_file: str = Field(..., extras={'cli':('-i', )})
-    input_hdf: str = Field(..., extras={'cli':('-d', '--hdf')})
-    max_records: int = Field(100, extras={'cli':('-m', '--max-records')})
+    input_file: str = Field(..., cli=('-i', ))
+    input_hdf: str = Field(..., cli=('-d', '--hdf'))
+    max_records: int = Field(100, cli=('-m', '--max-records'))
 ```
 
 Running with the `preset.json` defined above, works as expected.

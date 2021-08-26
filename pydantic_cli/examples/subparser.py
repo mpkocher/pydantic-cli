@@ -28,8 +28,8 @@ class AlphaOptions(BaseModel):
     class Config(CustomConfig):
         pass
 
-    input_file: str = Field(..., extras={"cli": ("-i", "--input")})
-    max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
+    input_file: str = Field(..., cli=("-i", "--input"))
+    max_records: int = Field(10, cli=("-m", "--max-records"))
     log_level: LogLevel = LogLevel.DEBUG
 
 
@@ -37,8 +37,8 @@ class BetaOptions(BaseModel):
     class Config(CustomConfig):
         pass
 
-    url: AnyUrl = Field(..., extras={"cli": ("-u", "--url")})
-    num_retries: int = Field(3, extras={"cli": ("-n", "--num-retries")})
+    url: AnyUrl = Field(..., cli=("-u", "--url"))
+    num_retries: int = Field(3, cli=("-n", "--num-retries"))
     log_level: LogLevel = LogLevel.INFO
 
 

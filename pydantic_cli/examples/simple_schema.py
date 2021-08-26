@@ -21,7 +21,7 @@ class Options(BaseModel):
         title="Input File",
         description="Path to the input file",
         # required=True, # this is implicitly set by ...
-        extras={"cli": ("-f", "--input-file")},
+        cli=("-f", "--input-file"),
     )
 
     max_records: int = Field(
@@ -29,14 +29,14 @@ class Options(BaseModel):
         title="Max Records",
         description="Max number of records",
         gt=0,
-        extras={"cli": ("-m",)},
+        cli=("-m",),
     )
 
     min_filter_score: float = Field(
         ...,
         title="Min Score",
         description="Minimum Score Filter that will be applied to the records",
-        extras={"cli": ("-s",)},
+        cli=("-s",),
         gt=0
         # or extras={'cli': ('-s', '--min-filter-score', )}
     )
@@ -46,7 +46,7 @@ class Options(BaseModel):
         title="Max Score",
         description="Maximum Score Filter that will be applied to the records",
         gt=0,
-        extras={"cli": ("-S",)}
+        cli=("-S",)
         # or extras={'cli': ('-S', '--min-filter-score', )}
     )
 

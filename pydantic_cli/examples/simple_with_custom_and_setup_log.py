@@ -28,8 +28,8 @@ class Options(BaseModel):
     class Config(ExampleConfigDefaults):
         pass
 
-    input_file: str = Field(..., extras={"cli": ("-i", "--input")})
-    max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
+    input_file: str = Field(..., cli=("-i", "--input"))
+    max_records: int = Field(10, cli=("-m", "--max-records"))
     # this leverages Pydantic's fundamental understanding of Enums
     log_level: LogLevel = LogLevel.INFO
 

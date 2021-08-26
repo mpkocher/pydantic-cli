@@ -19,9 +19,9 @@ class Options(BaseModel):
     class Config(ExampleConfigDefaults, DefaultConfig):
         CLI_SHELL_COMPLETION_ENABLE = HAS_AUTOCOMPLETE_SUPPORT
 
-    input_file: str = Field(..., extras={"cli": ("-i", "--input")})
-    min_filter_score: float = Field(..., extras={"cli": ("-f", "--filter-score")})
-    max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
+    input_file: str = Field(..., cli=("-i", "--input"))
+    min_filter_score: float = Field(..., cli=("-f", "--filter-score"))
+    max_records: int = Field(10, cli=("-m", "--max-records"))
 
 
 def example_runner(opts: Options) -> int:
