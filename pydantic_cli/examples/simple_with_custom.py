@@ -15,9 +15,9 @@ class Options(BaseModel):
     class Config(ExampleConfigDefaults, DefaultConfig):
         pass
 
-    input_file: str = Field(..., extras={"cli": ("-i", "--input")})
-    max_records: int = Field(10, extras={"cli": ("-m", "--max-records")})
-    min_filter_score: float = Field(..., extras={"cli": ("-f", "--filter-score")})
+    input_file: str = Field(..., cli=("-i", "--input"))
+    max_records: int = Field(10, cli=("-m", "--max-records"))
+    min_filter_score: float = Field(..., cli=("-f", "--filter-score"))
     alpha: Union[int, str] = 1
     values: List[str] = ["a", "b", "c"]
 

@@ -29,7 +29,7 @@ class Options(BaseModel):
 
     # Or customizing the CLI flag with a Tuple[str, str] of (short, long), or Tuple[str] of (long, )
     input_file3: str = Field(
-        ..., description="Path to input H5 file", extras={"cli": ("-f", "--hdf5")}
+        ..., description="Path to input H5 file", cli=("-f", "--hdf5")
     )
 
     # https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields
@@ -48,7 +48,7 @@ class Options(BaseModel):
     beta_filter: bool = Field(
         False,
         description="Enable beta filter mode",
-        extras={"cli": ("-b", "--beta-filter")},
+        cli=("-b", "--beta-filter"),
     )
 
     # Again, note Pydantic will treat these as indistinguishable
@@ -70,7 +70,7 @@ class Options(BaseModel):
     epsilon: Optional[bool] = Field(
         False,
         description="Enable epsilon meta-analysis.",
-        extras={"cli": ("--epsilon", "--disable-epsilon")},
+        cli=("--epsilon", "--disable-epsilon"),
     )
 
     states: Set[State]

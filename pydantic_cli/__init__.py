@@ -213,6 +213,14 @@ def __add_boolean_arg_to_parser(
     return parser
 
 
+def __get_cli_key_by_alias(d: T.Dict) -> T.Any:
+    # for backwards compatibility
+    try:
+        return d["extras"]["cli"]
+    except KeyError:
+        return d["cli"]
+
+
 def _add_pydantic_field_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
@@ -269,7 +277,7 @@ def _add_pydantic_field_to_parser(
     try:
         # cli_custom Should be a tuple2[Str, Str]
         cli_custom: CustomOptsType = __process_tuple(
-            extra["extras"]["cli"], default_long_arg
+            __get_cli_key_by_alias(extra), default_long_arg
         )
     except KeyError:
         if override_cli is None:
