@@ -495,9 +495,9 @@ def _runner(
 
         # some Pydantic classes do tolerate extra arguments.
         if pargv:
-            if hasattr(cls.Config, "extra") and cls.Config.extra == Extra.ignore:
+            if cls.Config.extra == Extra.ignore:
                 pass
-            elif hasattr(cls.Config, "extra") and pargs.cls.Config.extra == Extra.allow:
+            elif cls.Config.extra == Extra.allow:
                 raise NotImplementedError("Extra.allow is not implemented")
             else:
                 # the default behavior of ArgumentParser is to not tolerate extra arguments
