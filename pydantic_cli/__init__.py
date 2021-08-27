@@ -6,6 +6,7 @@ import typing as T
 from enum import Enum
 from typing import Callable as F
 import pydantic.fields
+from pydantic import Extra
 
 from ._version import __version__
 
@@ -486,11 +487,22 @@ def _runner(
         parser: CustomArgumentParser = to_parser_with_overrides(custom_default_values)
 
         # because of the subparser, the runner func is determined here
-        pargs = parser.parse_args(args)
+        pargs, pargv = parser.parse_known_args(args)
 
         # this is really only motivated by the subparser case
         # for the simple parser, the Pydantic class could just be passed in
         cls = pargs.cls
+
+        # some Pydantic classes do tolerate extra arguments.
+        if pargv:
+            if hasattr(cls.Config, "extra") and cls.Config.extra == Extra.ignore:
+                pass
+            elif hasattr(cls.Config, "extra") and pargs.cls.Config.extra == Extra.allow:
+                raise NotImplementedError("Extra.allow is not implemented")
+            else:
+                # the default behavior of ArgumentParser is to not tolerate extra arguments
+                parser.error("unrecognized arguments: %s" % " ".join(pargv))
+
         # There's some slop in here using set_default(func=) hack/trick
         # hence we have to explicitly define the expected type
         runner_func: F[[T.Any], int] = pargs.func
