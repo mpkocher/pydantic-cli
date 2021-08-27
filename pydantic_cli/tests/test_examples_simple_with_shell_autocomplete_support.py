@@ -20,7 +20,7 @@ class TestExamples(_TestHarness[Options]):
         if HAS_AUTOCOMPLETE_SUPPORT:
             args = ["--emit-completion", shell_id]
         else:
-            args = ["-i", "/path/to/file.txt", "-f", "1.0", "2"]
+            args = ["-i", "/path/to/file.txt", "-f", "1.0", "-m", "2"]
         self.run_config(args)
 
     def test_auto_complete_zsh(self):
