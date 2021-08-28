@@ -1,3 +1,5 @@
+import unittest
+
 from pydantic_cli.examples.simple_with_shell_autocomplete_support import (
     Options,
     example_runner,
@@ -19,12 +21,12 @@ class TestExamples(_TestHarness[Options]):
     def _test_auto_complete_shell(self, shell_id):
         if HAS_AUTOCOMPLETE_SUPPORT:
             args = ["--emit-completion", shell_id]
-        else:
-            args = ["-i", "/path/to/file.txt", "-f", "1.0", "2"]
-        self.run_config(args)
+            self.run_config(args)
 
+    @unittest.skipIf(not HAS_AUTOCOMPLETE_SUPPORT, "shtab not installed")
     def test_auto_complete_zsh(self):
         self._test_auto_complete_shell("zsh")
 
+    @unittest.skipIf(not HAS_AUTOCOMPLETE_SUPPORT, "shtab not installed")
     def test_auto_complete_bash(self):
         self._test_auto_complete_shell("bash")

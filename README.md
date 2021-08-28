@@ -590,9 +590,121 @@ See [shtab](https://github.com/iterative/shtab) for more details.
 
 Note, that due to the (typically) global zsh completions directory, this can create some friction points with different virtual (or conda) ENVS with the same executable name.
 
+# General Suggested Testing Model
+
+At a high level, `pydantic_cli` is (hopefully) a thin bridge between your `Options` defined as a Pydantic model and your 
+main `runner(opts: Options)` func that has hooks into the startup, shutdown and error handling of the command line tool. 
+It also supports loading config files defined as JSON. By design, `pydantic_cli` explicitly doesn't expose, or leak the argparse instance 
+because it would add too much surface area and it would enable users' to start mucking with the argparse instance in all kinds of unexpected ways. 
+The use of `argparse` internally is an hidden implementation detail.
+
+Testing can be done by leveraging the `to_runner` interface.  
+
+
+
+1. It's recommend trying to do the majority of testing via unit tests (independent of `pydantic_cli`) with your main function and different instances of your pydantic data model.
+2. Once this test coverage is reasonable, it can be useful to add a few smoke tests at the integration level leveraging `to_runner` to make sure the tool is functional. Any bugs at this level are probably at the `pydantic_cli` level, not your library code.
+
+Note, that `to_runner(Opts, my_main)` returns a `Callable[[List[str]], int]` that can be used with `argv` to return an integer exit code of your program. The `to_runner` layer will also catch any exceptions. 
+
+```python
+import unittest
+
+from pydantic import BaseModel
+from pydantic_cli import to_runner
+
+
+class Options(BaseModel):
+    alpha: int
+
+
+def main(opts: Options) -> int:
+    if opts.alpha < 0:
+        raise Exception(f"Got options {opts}. Forced raise for testing.")
+    return 0
+
+
+class TestExample(unittest.TestCase):
+
+    def test_core(self):
+        # Note, this has nothing to do with pydantic_cli
+        # If possible, this is where the bulk of the testing should be
+        self.assertEqual(0, main(Options(alpha=1)))
+
+    def test_example(self):
+        f = to_runner(Options, main)
+        self.assertEqual(0, f(["--alpha", "100"]))
+
+    def test_expected_error(self):
+        f = to_runner(Options, main)
+        self.assertEqual(1, f(["--alpha", "-10"]))
+```
+
+
+
+For more scrappy, interactive local development, it can be useful to add `ipdb` or `pdb` and create a custom `exception_handler`.
+
+```python
+import sys
+from pydantic import BaseModel
+from pydantic_cli import default_exception_handler, run_and_exit
+
+
+class Options(BaseModel):
+    alpha: int
+
+
+def exception_handler(ex: BaseException) -> int:
+    exit_code = default_exception_handler(ex)
+    import ipdb; ipdb.set_trace()
+    return exit_code
+
+
+def main(opts: Options) -> int:
+    if opts.alpha < 0:
+        raise Exception(f"Got options {opts}. Forced raise for testing.")
+    return 0
+
+
+if __name__ == "__main__":
+    run_and_exit(Options, main, exception_handler=exception_handler)(sys.argv[1:])
+```
+
+Alternatively, wrap your main function to call `ipdb`.
+
+```python
+import sys
+
+from pydantic import BaseModel
+from pydantic_cli import run_and_exit
+
+
+class Options(BaseModel):
+    alpha: int
+
+
+def main(opts: Options) -> int:
+    if opts.alpha < 0:
+        raise Exception(f"Got options {opts}. Forced raise for testing.")
+    return 0
+
+
+def main_with_ipd(opts: Options) -> int:
+    import ipdb; ipdb.set_trace()
+    return main(opts)
+
+
+if __name__ == "__main__":
+    run_and_exit(Options, main_with_ipd)([sys.argv[1:]])
+```
+
+The core design choice in `pydantic_cli` is leveraging composable functions `f(g(x))` style providing a straight-forward mechanism to plug into.
+
 # More Examples
 
-[More examples are provided here](https://github.com/mpkocher/pydantic-cli/tree/master/pydantic_cli/examples)
+[More examples are provided here](https://github.com/mpkocher/pydantic-cli/tree/master/pydantic_cli/examples) and [Testing Examples can be seen here](https://github.com/mpkocher/pydantic-cli/tree/master/pydantic_cli/tests). 
+
+The [TestHarness](https://github.com/mpkocher/pydantic-cli/blob/master/pydantic_cli/tests/__init__.py) might provide examples of how to test your CLI tool(s)
 
 # Limitations
 
