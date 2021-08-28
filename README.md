@@ -667,7 +667,7 @@ def main(opts: Options) -> int:
 
 
 if __name__ == "__main__":
-    run_and_exit(Options, main, exception_handler=exception_handler)(sys.argv[1:])
+    run_and_exit(Options, main, exception_handler=exception_handler)
 ```
 
 Alternatively, wrap your main function to call `ipdb`.
@@ -695,7 +695,7 @@ def main_with_ipd(opts: Options) -> int:
 
 
 if __name__ == "__main__":
-    run_and_exit(Options, main_with_ipd)([sys.argv[1:]])
+    run_and_exit(Options, main_with_ipd)
 ```
 
 The core design choice in `pydantic_cli` is leveraging composable functions `f(g(x))` style providing a straight-forward mechanism to plug into.
