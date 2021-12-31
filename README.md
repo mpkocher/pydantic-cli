@@ -818,6 +818,8 @@ Other tools that leverage type annotations to create CLI tools.
 - [plac](https://github.com/micheles/plac)  Parsing the Command Line the Easy Way.
 - [typedparse](https://github.com/khud/typedparse) Parser for command-line options based on type hints (Leverages: argparse and type annotations/hints)
 - [paiargparse](https://github.com/Planet-AI-GmbH/paiargparse) Extension to the python argparser allowing to automatically generate a hierarchical argument list based on dataclasses. (Leverages: argparse + dataclasses)
+- [piou](https://github.com/Andarius/piou) A CLI tool to build beautiful command-line interfaces with type validation.
+- [pyrallis](https://github.com/eladrich/pyrallis) A framework for simple dataclass-based configurations.
 
 # Stats
 
