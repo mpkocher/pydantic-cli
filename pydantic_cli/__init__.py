@@ -709,10 +709,8 @@ def to_subparser(
     for subparser_id, sbm in models.items():
         log.debug(f"Adding subparser id={subparser_id} with {sbm}")
 
-        # I believe mypy is confused by return type
-        spx = T.cast(
-            CustomArgumentParser,
-            sp.add_parser(subparser_id, help=sbm.description, add_help=False),
+        spx: CustomArgumentParser = sp.add_parser(
+            subparser_id, help=sbm.description, add_help=False
         )
 
         _add_pydantic_class_to_parser(
