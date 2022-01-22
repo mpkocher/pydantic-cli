@@ -609,7 +609,7 @@ def setup_hook_to_load_json(
         if cli_config.js_config_namespace is not None:
             # The "expected" error behavior here isn't completely obvious
             # perhaps this should raise if the key isn't found
-            dx = d.get(cli_config.js_config_namespace, {})
+            dx: T.Dict[str, T.Any] = d.get(cli_config.js_config_namespace, {})
             # log.debug(f"Loading namespace {cli_config.js_config_namespace} raw-dict={d}")
             return dx
     # log.debug(f"Loaded custom overrides {d}")
