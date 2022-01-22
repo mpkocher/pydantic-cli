@@ -395,6 +395,9 @@ def pydantic_class_to_parser(
     if cli_config.json_config_enable:
         _parser_add_arg_json_file(p, cli_config)
 
+    if cli_config.js_config_namespace is not None:
+        _parser_add_arg_json_ns(p, cli_config)
+
     if cli_config.shell_completion_enable:
         add_shell_completion_arg(p, cli_config.shell_completion_flag)
 
@@ -529,6 +532,10 @@ def null_setup_hook(args: T.List[str]) -> T.Dict[str, T.Any]:
     return {}
 
 
+def __to_help(msg: str, env_var: str, default: str) -> str:
+    return f"{msg}. Can be set using ENV VAR ({env_var}) (default:{default})"
+
+
 def _parser_add_arg_json_file(
     p: CustomArgumentParser, cli_config: CliConfig
 ) -> CustomArgumentParser:
@@ -542,8 +549,9 @@ def _parser_add_arg_json_file(
 
     path = cli_config.json_config_path
 
-    help = f"Path to configuration JSON file. Can be set using ENV VAR ({cli_config.json_config_env_var}) (default:{path})"
-
+    help = __to_help(
+        "Path to configuration JSON file", cli_config.json_config_env_var, str(path)
+    )
     p.add_argument(
         field,
         default=path,
@@ -551,6 +559,26 @@ def _parser_add_arg_json_file(
         help=help,
         required=False,
     )
+    return p
+
+
+def _parser_add_arg_json_ns(
+    p: CustomArgumentParser, cli_config: CliConfig
+) -> CustomArgumentParser:
+
+    help = __to_help(
+        "Set the (nested) namespace of the data model",
+        cli_config.js_config_namespace_env_var,
+        str(cli_config.js_config_namespace),
+    )
+
+    field = f"--{cli_config.js_config_namespace_flag}"
+    p.add_argument(
+        field,
+        default=cli_config.js_config_namespace,
+        help=help,
+    )
+
     return p
 
 
@@ -569,7 +597,7 @@ def setup_hook_to_load_json(
     # This can't have HelpAction or any other "Eager" action defined
     parser = create_parser_with_config_json_file_arg(cli_config)
 
-    # this is a namespace
+    # this the argparse namespace
     pjargs, _ = parser.parse_known_args(args)
 
     d = {}
@@ -578,6 +606,12 @@ def setup_hook_to_load_json(
 
     if json_config_path is not None:
         d = _load_json_file(json_config_path)
+        if cli_config.js_config_namespace is not None:
+            # The "expected" error behavior here isn't completely obvious
+            # perhaps this should raise if the key isn't found
+            dx = d.get(cli_config.js_config_namespace, {})
+            # log.debug(f"Loading namespace {cli_config.js_config_namespace} raw-dict={d}")
+            return dx
     # log.debug(f"Loaded custom overrides {d}")
     return d
 
