@@ -57,6 +57,7 @@ class _TestHarness(Generic[M], unittest.TestCase):
 @dataclass
 class WithEnv:
     """Set and unset an ENV var"""
+
     env_name: str
     value: str
 
@@ -69,13 +70,14 @@ class WithEnv:
 
 class WithTempJsonFile:
     """Write a dict and create a temp file that will be deleted"""
+
     def __init__(self, values: Dict):
         self._values = values
         self._file = NamedTemporaryFile(mode="w", delete=True, suffix=".json")
         self.file_name = self._file.name
 
     def __enter__(self):
-        with open(self.file_name, 'w') as f:
+        with open(self.file_name, "w") as f:
             json.dump(self._values, f)
         return self
 

@@ -11,8 +11,7 @@ class TestExamples(_TestHarness[Options]):
     CONFIG = HarnessConfig(Options, example_runner)
 
     def test_simple_01(self):
-        self.run_config(["--input_file", "/path/to/file.txt",
-                         "--max_record", "1234"])
+        self.run_config(["--input_file", "/path/to/file.txt", "--max_record", "1234"])
 
     def _test_simple_02(self):
         d = dict(input_file="/path/to/input.txt", max_records=12345)
