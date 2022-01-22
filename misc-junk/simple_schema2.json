@@ -1,8 +1,0 @@
-{
-    "input_file": "/path/to/file.txt",
-    "max_records": 123455,
-    "min_filter_score": 0.4,
-    "max_filter_score": 1.0,
-    "alpha": 9876,
-    "log_level": "DEBUG"
-}
