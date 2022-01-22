@@ -11,7 +11,7 @@ If both the JSON config file is supplied and a commandline argument is supplied,
 the explicit commandline argument will **override** the value supplied in the
 JSON file. This enables JSON files to be used as "presets".
 
-The `CLI_JSON_KEY` can customize the commandline option field. By default it
+The `CLI_JSON_KEY` can customize the commandline option field. By default, the key
 is set to 'json-config` (which generates a `--json-config` commandline argument).
 
 Similarly, `CLI_JSON_ENABLE`

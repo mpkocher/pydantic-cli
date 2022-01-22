@@ -1,5 +1,10 @@
+import json
+from dataclasses import dataclass
+import os
 import unittest
-from typing import TypeVar, Generic, Type
+import logging
+from tempfile import NamedTemporaryFile
+from typing import TypeVar, Generic, Type, Dict
 from typing import Callable as F
 
 
@@ -12,6 +17,8 @@ from pydantic_cli import (
     PrologueHandlerType,
     EpilogueHandlerType,
 )
+
+log = logging.getLogger(__name__)
 
 M = TypeVar("M", bound=BaseModel)
 
@@ -42,5 +49,35 @@ class _TestHarness(Generic[M], unittest.TestCase):
             prologue_handler=self.CONFIG.prologue,
             epilogue_handler=self.CONFIG.epilogue,
         )
+        # log.debug(f"****ARGS={args}")
         _exit_code = f(args)
         self.assertEqual(_exit_code, exit_code)
+
+
+@dataclass
+class WithEnv:
+    """Set and unset an ENV var"""
+    env_name: str
+    value: str
+
+    def __enter__(self):
+        os.environ.setdefault(self.env_name, self.value)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        os.environ.pop(self.env_name)
+
+
+class WithTempJsonFile:
+    """Write a dict and create a temp file that will be deleted"""
+    def __init__(self, values: Dict):
+        self._values = values
+        self._file = NamedTemporaryFile(mode="w", delete=True, suffix=".json")
+        self.file_name = self._file.name
+
+    def __enter__(self):
+        with open(self.file_name, 'w') as f:
+            json.dump(self._values, f)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._file.close()

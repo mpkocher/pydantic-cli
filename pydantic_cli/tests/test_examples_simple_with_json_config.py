@@ -1,21 +1,11 @@
-from . import _TestHarness, HarnessConfig
+from . import _TestHarness, HarnessConfig, WithTempJsonFile
 
-import json
-from tempfile import NamedTemporaryFile
 from pydantic_cli.examples.simple_with_json_config import Opts, runner
 
 
 class TestExample(_TestHarness[Opts]):
 
     CONFIG = HarnessConfig(Opts, runner)
-
-    def _util(self, d, more_args):
-        with NamedTemporaryFile(mode="w", delete=True) as f:
-            json.dump(d, f)
-            f.flush()
-            f.name
-            args = ["--json-training", str(f.name)] + more_args
-            self.run_config(args)
 
     def test_simple_json(self):
         opt = Opts(
@@ -25,9 +15,13 @@ class TestExample(_TestHarness[Opts]):
             alpha=1.234,
             beta=9.854,
         )
-        self._util(opt.dict(), [])
+        with WithTempJsonFile(opt.dict()) as f:
+            args = ["--json-training", f.file_name]
+            self.run_config(args)
 
     def test_simple_partial_json(self):
         d = dict(max_records=12, min_filter_score=1.024, alpha=1.234, beta=9.854)
 
-        self._util(d, ["--hdf_file", "/path/to/file.hdf5"])
+        with WithTempJsonFile(d) as f:
+            args = ["--json-training", f.file_name, "--hdf_file", "/path/to/file.hdf5"]
+            self.run_config(args)
