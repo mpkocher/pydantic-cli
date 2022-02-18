@@ -820,6 +820,8 @@ Other tools that leverage type annotations to create CLI tools.
 - [paiargparse](https://github.com/Planet-AI-GmbH/paiargparse) Extension to the python argparser allowing to automatically generate a hierarchical argument list based on dataclasses. (Leverages: argparse + dataclasses)
 - [piou](https://github.com/Andarius/piou) A CLI tool to build beautiful command-line interfaces with type validation.
 - [pyrallis](https://github.com/eladrich/pyrallis) A framework for simple dataclass-based configurations.
+- [ConfigArgParse](https://github.com/bw2/ConfigArgParse) A drop-in replacement for argparse that allows options to also be set via config files and/or environment variables.
+- [spock](https://github.com/fidelity/spock) spock is a framework that helps manage complex parameter configurations during research and development of Python applications. (Leverages: argparse, attrs, and type annotations/hints)
 
 # Stats
 
