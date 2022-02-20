@@ -309,7 +309,9 @@ def _add_pydantic_field_to_parser(
 
     choices: T.Optional[T.List[T.Any]] = None
     try:
-        if issubclass(field.type_, Enum):
+        if extra.get("use_enum_names") is True:
+            choices = [x for x in field.type_.__members__.keys()]
+        elif issubclass(field.type_, Enum):
             choices = [x.value for x in field.type_.__members__.values()]
     except TypeError:
         pass
