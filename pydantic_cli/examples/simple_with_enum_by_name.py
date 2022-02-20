@@ -22,7 +22,7 @@ class Animal(IntEnum):
         try:
             return cls.__members__[v]
         except KeyError:
-            raise ValueError('invalid value')
+            raise ValueError(f"Invalid enum name {v}")
 
 
 class Options(BaseModel):
