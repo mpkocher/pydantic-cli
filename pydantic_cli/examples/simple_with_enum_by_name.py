@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import Enum, auto, IntEnum
 from typing import Set
 
 from pydantic import BaseModel, Field
@@ -6,12 +6,8 @@ from pydantic import BaseModel, Field
 from pydantic_cli import run_and_exit
 
 
-class Animal(IntEnum):
-    """Access enum by name, pattern from
-    https://github.com/samuelcolvin/pydantic/issues/598#issuecomment-503032706"""
-
-    CAT = 1
-    DOG = 2
+class CastAbleEnum(Enum):
+    """Example enum mixin that will cast enum from case-insensitive name"""
 
     @classmethod
     def __get_validators__(cls):
@@ -20,14 +16,31 @@ class Animal(IntEnum):
     @classmethod
     def validate(cls, v):
         try:
-            return cls.__members__[v]
+            lookup = {k.lower(): item.value for k, item in cls.__members__.items()}
+            return lookup[v.lower()]
         except KeyError:
-            raise ValueError(f"Invalid enum name {v}")
+            raise ValueError(f"Invalid value {v}. {cls.cli_help()}")
+
+    @classmethod
+    def cli_help(cls) -> str:
+        return f"Allowed={list(cls.__members__.keys())}"
+
+
+class Mode(CastAbleEnum, IntEnum):
+    alpha = auto()
+    beta = auto()
+
+
+class State(CastAbleEnum, str, Enum):
+    RUNNING = "RUNNING"
+    FAILED = "FAILED"
+    SUCCESSFUL = "SUCCESSFUL"
 
 
 class Options(BaseModel):
-    favorite_animal: Animal = Field(..., use_enum_names=True)
-    animals: Set[Animal] = Field(..., use_enum_names=True)
+    states: Set[State] = Field(..., description=f"States to filter on. {State.cli_help()}")
+    mode: Mode = Field(..., description=f"Processing Mode to select. {Mode.cli_help()}")
+    max_records: int = 100
 
 
 def example_runner(opts: Options) -> int:
