@@ -38,7 +38,9 @@ class State(CastAbleEnum, str, Enum):
 
 
 class Options(BaseModel):
-    states: Set[State] = Field(..., description=f"States to filter on. {State.cli_help()}")
+    states: Set[State] = Field(
+        ..., description=f"States to filter on. {State.cli_help()}"
+    )
     mode: Mode = Field(..., description=f"Processing Mode to select. {Mode.cli_help()}")
     max_records: int = 100
 
