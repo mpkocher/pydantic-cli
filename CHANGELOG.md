@@ -1,5 +1,9 @@
 # CHANGELOG
 
+## Version 4.3.0
+
+- Leverage Pydantic validation for enum choices, enabling more complex use-cases
+
 ## Version 4.0.0
 
 - Backward incompatible change for semantics of boolean options
