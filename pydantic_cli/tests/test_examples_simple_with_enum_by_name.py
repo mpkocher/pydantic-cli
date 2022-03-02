@@ -13,6 +13,7 @@ class TestExamples(_TestHarness[Options]):
 
     def test_case_insensitive(self):
         args = ["--states", "successful", "failed", "--mode", "ALPHA"]
+        self.run_config(args)
 
     def test_bad_enum_by_value(self):
         args = [
