@@ -26,5 +26,5 @@ class TestExamples(_TestHarness[Options]):
     def test_simple_03(self):
         self.run_config(
             ["-i", "/path/to/file.txt", "-m", "1234", "--log_level", "BAD_LOG_LEVEL"],
-            exit_code=2,
+            exit_code=1,
         )

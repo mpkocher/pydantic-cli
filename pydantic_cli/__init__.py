@@ -307,13 +307,6 @@ def _add_pydantic_field_to_parser(
     else:
         shape_kwargs = {}
 
-    choices: T.Optional[T.List[T.Any]] = None
-    try:
-        if issubclass(field.type_, Enum):
-            choices = [x.value for x in field.type_.__members__.values()]
-    except TypeError:
-        pass
-
     if field.type_ == bool:
         # see comments above
         # case #1 and has different semantic meaning with how the tuple[str,str] is
@@ -342,7 +335,6 @@ def _add_pydantic_field_to_parser(
             default=default_value,
             dest=field_id,
             required=is_required,
-            choices=choices,  # type: ignore
             **shape_kwargs,  # type: ignore
         )
 

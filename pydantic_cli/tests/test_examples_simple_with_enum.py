@@ -21,4 +21,4 @@ class TestExamples(_TestHarness[Options]):
             "--mode",
             "1",
         ]
-        self.run_config(args, exit_code=2)
+        self.run_config(args, exit_code=1)
