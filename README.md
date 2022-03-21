@@ -822,6 +822,7 @@ Other tools that leverage type annotations to create CLI tools.
 - [pyrallis](https://github.com/eladrich/pyrallis) A framework for simple dataclass-based configurations.
 - [ConfigArgParse](https://github.com/bw2/ConfigArgParse) A drop-in replacement for argparse that allows options to also be set via config files and/or environment variables.
 - [spock](https://github.com/fidelity/spock) spock is a framework that helps manage complex parameter configurations during research and development of Python applications. (Leverages: argparse, attrs, and type annotations/hints)
+- [oneFace](https://github.com/Nanguage/oneFace) Generating interfaces(CLI, Qt GUI, Dash web app) from a Python function.
 
 # Stats
 
