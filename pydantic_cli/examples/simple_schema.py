@@ -6,7 +6,11 @@ Note, that this leverages Pydantic's underlying validation mechanism. For exampl
 `max_records` must be > 0.
 """
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic_cli._compat import PYDANTIC_V2
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel, Field
+else:
+    from pydantic import BaseModel, Field
 
 from pydantic_cli.examples import ExampleConfigDefaults
 from pydantic_cli import run_and_exit, HAS_AUTOCOMPLETE_SUPPORT

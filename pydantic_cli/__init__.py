@@ -5,7 +5,13 @@ import logging
 import typing as T
 from enum import Enum
 from typing import Callable as F
-import pydantic.fields
+
+from ._compat import PYDANTIC_V2
+
+if PYDANTIC_V2:
+    from pydantic.v1 import fields as pydantic_fields
+else:
+    import pydantic.fields as pydantic_fields
 
 from ._version import __version__
 
@@ -224,7 +230,7 @@ def __get_cli_key_by_alias(d: T.Dict) -> T.Any:
 def _add_pydantic_field_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
-    field: pydantic.fields.ModelField,
+    field: pydantic_fields.ModelField,
     override_value: T.Any = ...,
     override_cli: T.Optional[CustomOptsType] = None,
     long_prefix: str = "--",
@@ -302,7 +308,7 @@ def _add_pydantic_field_to_parser(
         default_value, field.type_, field.allow_none, is_required
     )
 
-    if field.shape in {pydantic.fields.SHAPE_LIST, pydantic.fields.SHAPE_SET}:
+    if field.shape in {pydantic_fields.SHAPE_LIST, pydantic_fields.SHAPE_SET}:
         shape_kwargs = {"nargs": "+"}
     else:
         shape_kwargs = {}
@@ -344,9 +350,7 @@ def _add_pydantic_field_to_parser(
 def _add_pydantic_class_to_parser(
     p: CustomArgumentParser, cls: T.Type[M], default_overrides: T.Dict[str, T.Any]
 ) -> CustomArgumentParser:
-
     for ix, field in cls.__fields__.items():
-
         cli_config = _get_cli_config_from_model(cls)
         default_cli_opts: T.Optional[CustomOptsType] = cli_config.custom_opts.get(
             ix, None
@@ -524,7 +528,6 @@ def null_setup_hook(args: T.List[str]) -> T.Dict[str, T.Any]:
 def _parser_add_arg_json_file(
     p: CustomArgumentParser, cli_config: CliConfig
 ) -> CustomArgumentParser:
-
     validator = (
         _resolve_file
         if cli_config.json_config_path_validate
@@ -557,7 +560,6 @@ def create_parser_with_config_json_file_arg(
 def setup_hook_to_load_json(
     args: T.List[str], cli_config: CliConfig
 ) -> T.Dict[str, T.Any]:
-
     # This can't have HelpAction or any other "Eager" action defined
     parser = create_parser_with_config_json_file_arg(cli_config)
 
@@ -661,7 +663,6 @@ def run_and_exit(
     epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
     args: T.Optional[T.List[str]] = None,
 ) -> T.NoReturn:
-
     _args: T.List[str] = sys.argv[1:] if args is None else args
 
     sys.exit(
@@ -683,7 +684,6 @@ def to_subparser(
     version: T.Optional[str] = None,
     overrides: T.Optional[T.Dict[str, T.Any]] = None,
 ) -> CustomArgumentParser:
-
     p = CustomArgumentParser(
         description=description, formatter_class=ArgumentDefaultsHelpFormatter
     )
@@ -732,7 +732,6 @@ def to_runner_sp(
     prologue_handler: PrologueHandlerType = default_prologue_handler,
     epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
 ) -> F[[T.List[str]], int]:
-
     # This is a bit messy. The design calling _runner requires a single setup hook.
     # in principle, there can be different json key names for each subparser
     # there's not really a clean way to support different key names (which
@@ -779,7 +778,6 @@ def run_sp_and_exit(
     epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
     args: T.Optional[T.List[str]] = None,
 ) -> T.NoReturn:
-
     f = to_runner_sp(
         subparsers,
         description=description,

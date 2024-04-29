@@ -18,7 +18,7 @@ class TestExamples(_TestHarness[Options]):
         self.run_config(["--input_file", "/path/to/file.txt", "--max_record", "1234"])
 
     def test_simple_02(self):
-        t = NamedTemporaryFile(mode="w", delete=True)
+        t= NamedTemporaryFile(delete=False)
         d = dict(input_file="/path/to/input.txt", max_records=12345)
 
         with open(t.name, "w") as f:

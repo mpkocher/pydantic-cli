@@ -9,10 +9,17 @@ For example,
 my-tool alpha --help
 my-tool beta --help
 """
+
 import sys
 import logging
 import typing as T
-from pydantic import BaseModel, AnyUrl, Field
+
+from pydantic_cli._compat import PYDANTIC_V2
+
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel, AnyUrl, Field
+else:
+    from pydantic import BaseModel, AnyUrl, Field
 
 from pydantic_cli.examples import ExampleConfigDefaults, LogLevel, prologue_handler
 from pydantic_cli import run_sp_and_exit, SubParser

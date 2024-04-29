@@ -1,7 +1,12 @@
 from enum import Enum, auto, IntEnum
 from typing import Set
 
-from pydantic import BaseModel, Field
+from pydantic_cli._compat import PYDANTIC_V2
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel, Field
+else:
+    from pydantic import BaseModel
+    from pydantic.fields import Field
 
 from pydantic_cli import run_and_exit
 

@@ -1,7 +1,11 @@
 import sys
 import logging
 
-from pydantic import BaseModel
+from pydantic_cli._compat import PYDANTIC_V2
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel
+else:
+    from pydantic import BaseModel
 
 from pydantic_cli import run_and_exit, DefaultConfig
 

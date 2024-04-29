@@ -1,8 +1,12 @@
 import logging
 from enum import Enum
 from typing import Optional, Union, Set
-from pydantic import BaseModel
-from pydantic.fields import Field
+from pydantic_cli._compat import PYDANTIC_V2
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel, Field
+else:
+    from pydantic import BaseModel
+    from pydantic.fields import Field
 
 from pydantic_cli import run_and_exit, DefaultConfig, default_minimal_exception_handler
 from pydantic_cli.examples import setup_logger

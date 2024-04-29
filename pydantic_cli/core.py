@@ -1,5 +1,11 @@
 import os
-from pydantic import BaseModel
+from ._compat import PYDANTIC_V2
+
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel
+else:
+    from pydantic import BaseModel
+
 from typing import Callable as F
 import typing as T
 

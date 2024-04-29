@@ -2,10 +2,16 @@
 Example that adds an option to emit shell autocomplete for bash/zsh
 requires `shtab` to be installed.
 """
+
 import sys
 import logging
 
-from pydantic import BaseModel, Field
+from pydantic_cli._compat import PYDANTIC_V2
+
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel, Field
+else:
+    from pydantic import BaseModel, Field
 
 from pydantic_cli import __version__
 from pydantic_cli import run_and_exit, DefaultConfig

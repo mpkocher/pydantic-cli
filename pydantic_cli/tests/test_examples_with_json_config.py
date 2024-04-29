@@ -10,7 +10,7 @@ class TestExample(_TestHarness[Opts]):
     CONFIG = HarnessConfig(Opts, runner)
 
     def _util(self, d, more_args):
-        with NamedTemporaryFile(mode="w", delete=True) as f:
+        with NamedTemporaryFile(mode="w", delete=False) as f:
             json.dump(d, f)
             f.flush()
             f.name

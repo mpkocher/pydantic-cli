@@ -5,7 +5,11 @@ This example will generate a CLI tool with 1 required argument and one optional 
 
 Note the optional boolean value must be supplied as `--run_training False`
 """
-from pydantic import BaseModel
+from pydantic_cli._compat import PYDANTIC_V2
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel
+else:
+    from pydantic import BaseModel
 
 from pydantic_cli import run_and_exit, DefaultConfig
 

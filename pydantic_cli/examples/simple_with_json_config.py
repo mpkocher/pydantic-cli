@@ -17,7 +17,13 @@ is set to 'json-config` (which generates a `--json-config` commandline argument)
 Similarly, `CLI_JSON_ENABLE`
 """
 import logging
-from pydantic import BaseModel
+
+from pydantic_cli._compat import PYDANTIC_V2
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel
+else:
+    from pydantic import BaseModel
+
 from pydantic_cli import run_and_exit, DefaultConfig
 from pydantic_cli.examples import epilogue_handler, prologue_handler
 

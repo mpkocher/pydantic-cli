@@ -2,8 +2,12 @@ import unittest
 from typing import TypeVar, Generic, Type
 from typing import Callable as F
 
+from pydantic_cli._compat import PYDANTIC_V2
 
-from pydantic import BaseModel
+if PYDANTIC_V2:
+    from pydantic.v1 import BaseModel
+else:
+    from pydantic import BaseModel
 
 from pydantic_cli import (
     to_runner,
@@ -14,6 +18,7 @@ from pydantic_cli import (
 )
 
 M = TypeVar("M", bound=BaseModel)
+
 
 # Making this name a bit odd (from TestConfig)
 # to get around Pytest complaining that
