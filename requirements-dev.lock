@@ -10,40 +10,53 @@
 -e file:.
 annotated-types==0.6.0
     # via pydantic
-black==24.4.2
-click==8.1.7
-    # via black
+cfgv==3.4.0
+    # via pre-commit
 colorama==0.4.6
-    # via click
     # via pytest
+coverage==7.5.0
+    # via pytest-cov
+distlib==0.3.8
+    # via virtualenv
 exceptiongroup==1.2.1
     # via pytest
+filelock==3.14.0
+    # via virtualenv
+identify==2.5.36
+    # via pre-commit
 iniconfig==2.0.0
     # via pytest
 mypy==1.10.0
 mypy-extensions==1.0.0
-    # via black
     # via mypy
+nodeenv==1.8.0
+    # via pre-commit
 packaging==24.0
-    # via black
     # via pytest
-pathspec==0.12.1
-    # via black
 platformdirs==4.2.1
-    # via black
+    # via virtualenv
 pluggy==1.5.0
     # via pytest
+pre-commit==3.7.0
 pydantic==2.7.1
     # via pydantic-cli
 pydantic-core==2.18.2
     # via pydantic
 pytest==8.2.0
+    # via pytest-cov
+pytest-cov==5.0.0
+pyyaml==6.0.1
+    # via pre-commit
+ruff==0.4.2
+setuptools==69.5.1
+    # via nodeenv
 tomli==2.0.1
-    # via black
+    # via coverage
     # via mypy
     # via pytest
 typing-extensions==4.11.0
-    # via black
     # via mypy
     # via pydantic
     # via pydantic-core
+virtualenv==20.26.1
+    # via pre-commit

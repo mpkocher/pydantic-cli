@@ -10,7 +10,6 @@ my-tool alpha --help
 my-tool beta --help
 """
 
-import sys
 import logging
 import typing as T
 

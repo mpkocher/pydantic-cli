@@ -36,7 +36,7 @@ class Mode(CastAbleEnum, IntEnum):
     beta = auto()
 
 
-class State(CastAbleEnum, str, Enum):
+class State(CastAbleEnum, str, Enum): # type: ignore[misc]
     RUNNING = "RUNNING"
     FAILED = "FAILED"
     SUCCESSFUL = "SUCCESSFUL"

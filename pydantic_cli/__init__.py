@@ -3,7 +3,6 @@ import sys
 import traceback
 import logging
 import typing as T
-from enum import Enum
 from typing import Callable as F
 
 from ._compat import PYDANTIC_V2
@@ -24,12 +23,11 @@ from .core import (
     _get_cli_config_from_model,
 )
 from .utils import _load_json_file, _resolve_file, _resolve_file_or_none_and_warn
-from .argparse import CustomArgumentParser, EagerHelpAction
+from .argparse import CustomArgumentParser
 from .argparse import _parser_add_help, _parser_add_version
 from .argparse import FailedExecutionException, TerminalEagerCommand
 from argparse import ArgumentDefaultsHelpFormatter
 from .shell_completion import (
-    EmitShellCompletionAction,
     add_shell_completion_arg,
     HAS_AUTOCOMPLETE_SUPPORT,
 )
@@ -49,6 +47,7 @@ __all__ = [
     "default_prologue_handler",
     "default_epilogue_handler",
     "DefaultConfig",
+    "DEFAULT_CLI_CONFIG",
     "HAS_AUTOCOMPLETE_SUPPORT",
     "PrologueHandlerType",
     "EpilogueHandlerType",
