@@ -1,3 +1,0 @@
-pytest >= 6.0.1
-mypy >= 0.930
-black >= 21.7b0
