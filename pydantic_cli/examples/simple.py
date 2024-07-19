@@ -8,6 +8,7 @@ and can be called
 my-tool --input_file file.fasta --max_records 10
 ```
 """
+
 from pydantic import BaseModel
 
 from pydantic_cli import run_and_exit

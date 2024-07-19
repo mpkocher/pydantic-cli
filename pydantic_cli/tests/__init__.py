@@ -15,6 +15,7 @@ from pydantic_cli import (
 
 M = TypeVar("M", bound=BaseModel)
 
+
 # Making this name a bit odd (from TestConfig)
 # to get around Pytest complaining that
 # it can't collect the "Test"

@@ -25,7 +25,7 @@ class TestExample(_TestHarness[Opts]):
             alpha=1.234,
             beta=9.854,
         )
-        self._util(opt.dict(), [])
+        self._util(opt.model_dump(), [])
 
     def test_simple_partial_json(self):
         d = dict(max_records=12, min_filter_score=1.024, alpha=1.234, beta=9.854)

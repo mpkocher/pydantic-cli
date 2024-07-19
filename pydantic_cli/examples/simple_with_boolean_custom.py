@@ -4,7 +4,7 @@ from typing import Optional, Union, Set
 from pydantic import BaseModel
 from pydantic.fields import Field
 
-from pydantic_cli import run_and_exit, DefaultConfig, default_minimal_exception_handler
+from pydantic_cli import run_and_exit, default_minimal_exception_handler, CliConfig
 from pydantic_cli.examples import setup_logger
 
 
@@ -17,8 +17,7 @@ class State(str, Enum):
 
 
 class Options(BaseModel):
-    class Config(DefaultConfig):
-        pass
+    model_config = CliConfig(frozen=True)
 
     # Simple Arg/Option can be added and a reasonable commandline "long" flag will be created.
     input_file: str
@@ -32,10 +31,8 @@ class Options(BaseModel):
         ..., description="Path to input H5 file", cli=("-f", "--hdf5")
     )
 
-    # https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields
-    # Pydantic has a bit of an odd model on how it treats Optional[T]
-    # These end up being indistinguishable.
-    outfile: Optional[str]
+    ## FIXME This "optional" value has changed semantics in V2
+    outfile: Optional[str] = None
     fasta: Optional[str] = None
     # This is a "required" value that can be set to None, or str
     report_json: Optional[str] = Field(...)
@@ -52,22 +49,22 @@ class Options(BaseModel):
     )
 
     # Again, note Pydantic will treat these as indistinguishable
-    gamma: Optional[bool]
+    gamma: bool
     delta: Optional[bool] = None
 
     # You need to set this to ... to declare it as "Required". The pydantic docs recommend using
     # Field(...) instead of ... to avoid issues with mypy.
     # pydantic-cli doesn't have a good mechanism for declaring this 3-state value of None, True, False.
     # using a boolean commandline flag (e.g., --enable-logging, or --disable-logging)
-    zeta_mode: Optional[bool] = Field(
+    zeta_mode: bool = Field(
         ..., description="Enable/Disable Zeta mode to experimental filtering mode."
     )
 
-    # this a bit of a contradiction from the commandline perspective. A "optional" value
+    # this a bit of a contradiction from the commandline perspective. An "optional" value
     # with a default value. From a pydantic-cli view, the type should just be 'bool' because this 3-state
     # True, False, None is not well represented (i.e., can't set the value to None from the commandline)
     # Similar to the other Optional[bool] cases, the custom flag must be provided as a (--enable, --disable) format.
-    epsilon: Optional[bool] = Field(
+    epsilon: bool = Field(
         False,
         description="Enable epsilon meta-analysis.",
         cli=("--epsilon", "--disable-epsilon"),
