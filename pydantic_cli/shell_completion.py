@@ -6,6 +6,7 @@ easy to reuse other actions. Specially the "eager" actions
 which can at any point in time call parser.exit() which
 doesn't work with how pydantic-cli is designed.
 """
+
 import sys
 from argparse import Action, ArgumentParser
 from .argparse import TerminalEagerCommand

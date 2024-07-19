@@ -1,20 +1,22 @@
+import collections
 import datetime
 import sys
 import traceback
 import logging
+import typing
 import typing as T
-from enum import Enum
 from typing import Callable as F
-import pydantic.fields
+
+import pydantic
+from pydantic.fields import FieldInfo
+from pydantic_core import PydanticUndefined
 
 from ._version import __version__
 
-from .core import M, CustomOptsType
+from .core import M, Tuple1or2Type, Tuple1Type, Tuple2Type
 from .core import EpilogueHandlerType, PrologueHandlerType, ExceptionHandlerType
 from .core import (
-    DefaultConfig,
     CliConfig,
-    DEFAULT_CLI_CONFIG,
     _get_cli_config_from_model,
 )
 from .utils import _load_json_file, _resolve_file, _resolve_file_or_none_and_warn
@@ -31,7 +33,7 @@ from .shell_completion import (
 log = logging.getLogger(__name__)
 
 NOT_PROVIDED = ...
-
+NONE_TYPE = type(None)
 
 __all__ = [
     "to_runner",
@@ -42,7 +44,7 @@ __all__ = [
     "default_minimal_exception_handler",
     "default_prologue_handler",
     "default_epilogue_handler",
-    "DefaultConfig",
+    "CliConfig",
     "HAS_AUTOCOMPLETE_SUPPORT",
     "PrologueHandlerType",
     "EpilogueHandlerType",
@@ -68,20 +70,39 @@ class SubParser(T.Generic[M]):
         return "<{k} func:{f} >".format(**d)
 
 
-def __try_to_pretty_type(field_type, allow_none: bool) -> str:
+def _is_sequence(annotation: T.Any) -> bool:
+    #  FIXME There's probably a better and robust way to do this.
+    # Lifted from pydantic
+    LIST_TYPES: list[type] = [list, typing.List, collections.abc.MutableSequence]
+    SET_TYPES: list[type] = [set, typing.Set, collections.abc.MutableSet]
+    FROZEN_SET_TYPES: list[type] = [frozenset, typing.FrozenSet, collections.abc.Set]
+    ALL_SEQ = set(LIST_TYPES + SET_TYPES + FROZEN_SET_TYPES)
+
+    # what is exactly going on here?
+    return getattr(annotation, "__origin__", "NOTFOUND") in ALL_SEQ
+
+
+def __try_to_pretty_type(field_type) -> str:
     """
     This is a marginal improvement to get the types to be
     displayed in slightly better format.
 
     FIXME. This needs to be display Union types better.
     """
-    prefix = "Optional[" if allow_none else ""
-    suffix = "]" if allow_none else ""
-    try:
-        name = field_type.__name__
-    except AttributeError:
-        name = repr(field_type)
-    return "".join(["type:", prefix, name, suffix])
+
+    args = typing.get_args(field_type)
+    if args:
+        if len(args) == 1:
+            name = field_type.__name__
+        else:
+            name = "|".join(map(lambda x: x.__name__, args))
+    else:
+        try:
+            name = field_type.__name__
+        except AttributeError:
+            name = repr(field_type)
+
+    return f"type:{name}"
 
 
 def __to_type_description(
@@ -90,253 +111,120 @@ def __to_type_description(
     allow_none: bool = False,
     is_required: bool = False,
 ):
-    t = (
-        ""
-        if field_type is NOT_PROVIDED
-        else __try_to_pretty_type(field_type, allow_none)
-    )
+    t = "" if field_type is NOT_PROVIDED else __try_to_pretty_type(field_type)
     # FIXME Pydantic has a very odd default of None, which makes often can make the
     # the "default" is actually None, or is not None
     # avoid using in with a Set to avoid assumptions that default_value is hashable
     allowed_defaults: T.List[T.Any] = (
-        [NOT_PROVIDED] if allow_none else [NOT_PROVIDED, None]
+        [NOT_PROVIDED, PydanticUndefined]
+        if allow_none
+        else [NOT_PROVIDED, PydanticUndefined, None, type(None)]
     )
     v = (
         ""
         if any((default_value is x) for x in allowed_defaults)
         else f"default:{default_value}"
     )
-    required = " required=True" if is_required else ""
+    required = " *required*" if is_required else ""
     sep = " " if v else ""
     xs = sep.join([t, v]) + required
     return xs
 
 
-def __process_tuple(
-    tuple_one_or_two: T.Sequence[str], long_arg: str
-) -> T.Union[T.Tuple[str], T.Tuple[str, str]]:
+@pydantic.validate_call
+def __process_tuple(tuple_one_or_two: Tuple1or2Type, long_arg: str) -> Tuple1or2Type:
     """
     If the custom args are provided as only short, then
-    add the long version.
+    add the long version. Or just use the
     """
     lx: T.List[str] = list(tuple_one_or_two)
 
-    def is_short(xs) -> int:
-        # xs = '-s'
-        return len(xs) == 2
-
     nx = len(lx)
     if nx == 1:
-        first = lx[0]
-        if is_short(first):
-            return first, long_arg
+        if len(lx[0]) == 2:  # xs = '-s'
+            return lx[0], long_arg
         else:
             # this is the positional only case
-            return (first,)
+            return (lx[0],)
     elif nx == 2:
         # the explicit form is provided
         return lx[0], lx[1]
     else:
         raise ValueError(
-            f"Unsupported format for `{tuple_one_or_two}`. Expected 1 or 2 tuple."
+            f"Unsupported format for `{tuple_one_or_two}` type={type(tuple_one_or_two)}. Expected 1 or 2 tuple."
         )
-
-
-def __add_boolean_arg_negate_to_parser(
-    parser: CustomArgumentParser,
-    field_id: str,
-    cli_custom: CustomOptsType,
-    default_value: bool,
-    type_doc: str,
-    description: T.Optional[str],
-) -> CustomArgumentParser:
-    dx = {True: "store_true", False: "store_false"}
-    desc = description or ""
-    help_doc = f"{desc} ({type_doc})"
-    parser.add_argument(
-        *cli_custom,
-        action=dx[not default_value],
-        dest=field_id,
-        default=default_value,
-        help=help_doc,
-    )
-    return parser
-
-
-def __add_boolean_arg_to_parser(
-    parser: CustomArgumentParser,
-    field_id: str,
-    cli_custom: CustomOptsType,
-    default_value: bool,
-    is_required: bool,
-    type_doc: str,
-    description: T.Optional[str],
-) -> CustomArgumentParser:
-    # Overall this is a bit messy to add a boolean flag.
-
-    error_msg = (
-        f"boolean field ({field_id}) with custom CLI options ({cli_custom}) must be defined "
-        "as a Tuple2[str, str] of True, False for the field. For example, (--enable-X, --disable-X)."
-    )
-
-    n = len(cli_custom)
-
-    if n == 2:
-        # Argparse is really a thorny beast
-        # if you set the group level required=True, then the add_argument must be
-        # set to optional (this is encapsulated at the group level). Otherwise
-        # argparse will raise "mutually exclusive arguments must be optional"
-        group = parser.add_mutually_exclusive_group(required=is_required)
-        # log.info(f"Field={field_id}. Creating group {group} required={is_required}")
-
-        # see comments above about Group
-        if is_required:
-            is_required = False
-
-        bool_datum = [(True, "store_true"), (False, "store_false")]
-
-        for k, (bool_, store_bool) in zip(cli_custom, bool_datum):
-            if bool_ != default_value:
-                desc = description or f"Set {field_id} to {bool_}."
-                help_doc = f"{desc} ({type_doc})"
-                group.add_argument(
-                    k,
-                    help=help_doc,
-                    action=store_bool,
-                    default=default_value,
-                    dest=field_id,
-                    required=is_required,
-                )
-    else:
-        raise ValueError(error_msg)
-
-    return parser
-
-
-def __get_cli_key_by_alias(d: T.Dict) -> T.Any:
-    # for backwards compatibility
-    try:
-        return d["extras"]["cli"]
-    except KeyError:
-        return d["cli"]
 
 
 def _add_pydantic_field_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
-    field: pydantic.fields.ModelField,
+    field_info: FieldInfo,
     override_value: T.Any = ...,
-    override_cli: T.Optional[CustomOptsType] = None,
     long_prefix: str = "--",
-    bool_prefix: T.Tuple[str, str] = DefaultConfig.CLI_BOOL_PREFIX,
 ) -> CustomArgumentParser:
     """
 
     :param field_id: Global Id used to store
-    :param field: Field from Pydantic (this is messy from a type standpoint)
-    :param override_value: override the default value defined in the Field
-    :param override_cli: Custom format of the CLI argument
+    :param field_info: FieldInfo from Pydantic (this is messy from a type standpoint)
+    :param override_value: override the default value defined in the Field (perhaps define in ENV or JSON file)
+
+    Supported Core cases of primitive types, T (e.g., float, str, int)
+
+    alpha: str                         -> *required* --alpha abc
+    alpha: Optional[str]               -> *required* --alpha None  # This is kinda a problem and not well-defined
+    alpha: Optional[str] = None        ->            --alpha abc ,or --alpha None (to explicitly set none)
+
+    alpha: bool                        -> *required* --alpha "true" (Pydantic will handle the casting)
+    alpha: Optional[bool]              -> *required* --alpha "none" or --alpha true
+    alpha: Optional[bool] = True       ->            --alpha "none" or --alpha true
+
+
+    Sequence Types:
+
+    xs: List[str]                      -> *required* --xs 1 2 3
+    xs: Optional[List[str]]            -> There's a useful reason to encode this type, however,
+                                          it's not well-defined or supported. This should be List[T]
     """
 
-    # field is Field from Pydantic
-    description = field.field_info.description
-    extra: T.Dict[str, T.Any] = field.field_info.extra
     default_long_arg = "".join([long_prefix, field_id])
+    description = field_info.description
+    # there's mypy type issues here
+    cli_custom_: Tuple1or2Type = (
+        (default_long_arg,)
+        if field_info.json_schema_extra is None  # type: ignore
+        else field_info.json_schema_extra.get("cli", (default_long_arg,))  # type: ignore
+    )
+    cli_short_long: Tuple1or2Type = __process_tuple(cli_custom_, default_long_arg)
 
-    # If a default value is provided, it's not necessarily required?
-    is_required = field.required is True  # required is UndefinedBool
+    is_required = field_info.is_required()
+    is_nullable = type(None) in typing.get_args(field_info.annotation)
+    default_value = field_info.default
+    is_sequence = _is_sequence(field_info.annotation)
 
-    default_value = field.default
+    # If the value is loaded from JSON, or ENV, this will fundamentally
+    # change if a field is required.
     if override_value is not NOT_PROVIDED:
         default_value = override_value
         is_required = False
 
-    # The bool cases require some attention
-    # Cases
-    # 1. x:bool = False|True
-    # 2. x:bool
-    # 3  x:Optional[bool]
-    # 4  x:Optional[bool] = None
-    # 5  x:Optional[bool] = Field(...)
-    # 6  x:Optional[bool] = True|False
-
-    # cases 2-6 are handled in the same way with (--enable-X, --disable-X) semantics
-    # case 5 has limitations because you can't set None from the commandline
-    # case 1 is a very common cases and the provided CLI custom flags have a different semantic meaning
-    # to negate the default value. E.g., debug:bool = False, will generate a CLI flag of
-    # --enable-debug to set the value to True. Very common to set this to (-d, --debug) to True
-    # avoid using in with a Set {True,False} to avoid assumptions that default_value is hashable
-    is_bool_with_non_null_default = all(
-        (
-            not is_required,
-            not field.allow_none,
-            default_value is True or default_value is False,
-        )
-    )
-
-    try:
-        # cli_custom Should be a tuple2[Str, Str]
-        cli_custom: CustomOptsType = __process_tuple(
-            __get_cli_key_by_alias(extra), default_long_arg
-        )
-    except KeyError:
-        if override_cli is None:
-            if field.type_ == bool:
-                if is_bool_with_non_null_default:
-                    # flipped to negate
-                    prefix = {True: bool_prefix[1], False: bool_prefix[0]}
-                    cli_custom = (f"{prefix[default_value]}{field_id}",)
-                else:
-                    cli_custom = (
-                        f"{bool_prefix[0]}{field_id}",
-                        f"{bool_prefix[1]}{field_id}",
-                    )
-            else:
-                cli_custom = (default_long_arg,)
-        else:
-            cli_custom = __process_tuple(override_cli, default_long_arg)
-
-    # log.debug(f"Creating Argument Field={field_id} opts:{cli_custom}, allow_none={field.allow_none} default={default_value} type={field.type_} required={is_required} dest={field_id} desc={description}")
-
     type_desc = __to_type_description(
-        default_value, field.type_, field.allow_none, is_required
+        default_value, field_info.annotation, is_nullable, is_required
     )
 
-    if field.shape in {pydantic.fields.SHAPE_LIST, pydantic.fields.SHAPE_SET}:
-        shape_kwargs = {"nargs": "+"}
-    else:
-        shape_kwargs = {}
+    # log.debug(f"Creating Argument Field={field_id} opts:{cli_short_long}, allow_none={field.allow_none} default={default_value} type={field.type_} required={is_required} dest={field_id} desc={description}")
 
-    if field.type_ == bool:
-        # see comments above
-        # case #1 and has different semantic meaning with how the tuple[str,str] is
-        # interpreted and added to the parser
-        if is_bool_with_non_null_default:
-            __add_boolean_arg_negate_to_parser(
-                parser, field_id, cli_custom, default_value, type_desc, description
-            )
-        else:
-            __add_boolean_arg_to_parser(
-                parser,
-                field_id,
-                cli_custom,
-                default_value,
-                is_required,
-                type_desc,
-                description,
-            )
-    else:
-        # MK. I don't think there's any point trying to fight with argparse to get
-        # the types correct here. It's just a mess from a type standpoint.
-        desc = description or ""
-        parser.add_argument(
-            *cli_custom,
-            help=f"{desc} ({type_desc})",
-            default=default_value,
-            dest=field_id,
-            required=is_required,
-            **shape_kwargs,  # type: ignore
-        )
+    # MK. I don't think there's any point trying to fight with argparse to get
+    # the types correct here. It's just a mess from a type standpoint.
+    shape_kw = {"nargs": "+"} if is_sequence else {}
+    desc = description or ""
+    parser.add_argument(
+        *cli_short_long,
+        help=f"{desc} ({type_desc})",
+        default=default_value,
+        dest=field_id,
+        required=is_required,
+        **shape_kw,  # type: ignore
+    )
 
     return parser
 
@@ -345,22 +233,9 @@ def _add_pydantic_class_to_parser(
     p: CustomArgumentParser, cls: T.Type[M], default_overrides: T.Dict[str, T.Any]
 ) -> CustomArgumentParser:
 
-    for ix, field in cls.__fields__.items():
-
-        cli_config = _get_cli_config_from_model(cls)
-        default_cli_opts: T.Optional[CustomOptsType] = cli_config.custom_opts.get(
-            ix, None
-        )
-
+    for ix, field in cls.model_fields.items():
         override_value = default_overrides.get(ix, ...)
-        _add_pydantic_field_to_parser(
-            p,
-            ix,
-            field,
-            override_value=override_value,
-            override_cli=default_cli_opts,
-            bool_prefix=cli_config.bool_prefix,
-        )
+        _add_pydantic_field_to_parser(p, ix, field, override_value=override_value)
 
     return p
 
@@ -378,17 +253,17 @@ def pydantic_class_to_parser(
     in the Pydantic data model class.
 
     """
-    p = CustomArgumentParser(description=description, add_help=False)
+    p0 = CustomArgumentParser(description=description, add_help=False)
 
-    _add_pydantic_class_to_parser(p, cls, default_value_override)
+    p = _add_pydantic_class_to_parser(p0, cls, default_value_override)
 
     cli_config = _get_cli_config_from_model(cls)
 
-    if cli_config.json_config_enable:
+    if cli_config["cli_json_enable"]:
         _parser_add_arg_json_file(p, cli_config)
 
-    if cli_config.shell_completion_enable:
-        add_shell_completion_arg(p, cli_config.shell_completion_flag)
+    if cli_config["cli_shell_completion_enable"]:
+        add_shell_completion_arg(p, cli_config["cli_shell_completion_flag"])
 
     _parser_add_help(p)
 
@@ -411,7 +286,7 @@ def default_exception_handler(ex: BaseException) -> int:
     Maps/Transforms the Exception type to an integer exit code
     """
     # this might need the opts instance, however
-    # this isn't really well defined if there's an
+    # this isn't really well-defined if there's an
     # error at that level
     sys.stderr.write(str(ex))
     exc_type, exc_value, exc_traceback = sys.exc_info()
@@ -492,7 +367,7 @@ def _runner(
 
         # This is a bit sloppy. There's some fields that are added
         # to the argparse namespace to get around some of argparse's thorny design
-        pure_keys = cls.schema()["properties"].keys()
+        pure_keys = cls.model_json_schema()["properties"].keys()
 
         # Remove the items that may have
         # polluted the namespace (e.g., func, cls, json_config)
@@ -503,7 +378,7 @@ def _runner(
 
         # this validation interface is a bit odd
         # and the errors aren't particularly pretty in the console
-        cls.validate(opts)
+        cls.model_validate(opts)
         prologue_handler(opts)
         exit_code = runner_func(opts)
     except TerminalEagerCommand:
@@ -527,14 +402,14 @@ def _parser_add_arg_json_file(
 
     validator = (
         _resolve_file
-        if cli_config.json_config_path_validate
+        if cli_config["cli_json_validate_path"]
         else _resolve_file_or_none_and_warn
     )
-    field = f"--{cli_config.json_config_key}"
+    field = f"--{cli_config['cli_json_key']}"
 
-    path = cli_config.json_config_path
+    path = cli_config["cli_json_config_path"]
 
-    help = f"Path to configuration JSON file. Can be set using ENV VAR ({cli_config.json_config_env_var}) (default:{path})"
+    help = f"Path to configuration JSON file. Can be set using ENV VAR ({cli_config['cli_json_config_env_var']}) (default:{path})"
 
     p.add_argument(
         field,
@@ -566,7 +441,10 @@ def setup_hook_to_load_json(
 
     d = {}
 
-    json_config_path = getattr(pjargs, cli_config.json_config_key_sanitized(), None)
+    #  Arg parse will do some munging on this due to it's Namespace attribute style.
+    json_config_path = getattr(
+        pjargs, cli_config["cli_json_key"].replace("-", "_"), None
+    )
 
     if json_config_path is not None:
         d = _load_json_file(json_config_path)
@@ -600,12 +478,12 @@ def _runner_with_args(
 
     cli_config = _get_cli_config_from_model(cls)
 
-    if cli_config.json_config_enable:
+    if cli_config["cli_json_enable"]:
 
-        def __setup(args_):
+        def __setup(args: list[str]) -> T.Dict[str, T.Any]:
             c = cli_config.copy()
-            c.json_config_path_validate = False
-            return setup_hook_to_load_json(args_, c)
+            c["cli_json_validate_path"] = False
+            return setup_hook_to_load_json(args, c)
 
     else:
         __setup = null_setup_hook
@@ -711,7 +589,7 @@ def to_subparser(
 
         cli_config = _get_cli_config_from_model(sbm.model_class)
 
-        if cli_config.json_config_enable:
+        if cli_config["cli_json_enable"]:
             _parser_add_arg_json_file(spx, cli_config)
 
         _parser_add_help(spx)
@@ -736,17 +614,17 @@ def to_runner_sp(
     # This is a bit messy. The design calling _runner requires a single setup hook.
     # in principle, there can be different json key names for each subparser
     # there's not really a clean way to support different key names (which
-    # you probably don't want for consistency sake.
+    # you probably don't want for consistency’s sake.
 
     for sbm in subparsers.values():
         cli_config = _get_cli_config_from_model(sbm.model_class)
 
-        if cli_config.json_config_enable:
+        if cli_config["cli_json_enable"]:
 
             def _setup_hook(args: T.List[str]) -> T.Dict[str, T.Any]:
                 # We allow the setup to fail if the JSON config isn't found
                 c = cli_config.copy()
-                c.json_config_path_validate = False
+                c["cli_json_validate_path"] = False
                 return setup_hook_to_load_json(args, cli_config)
 
         else:
