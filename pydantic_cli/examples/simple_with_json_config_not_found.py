@@ -3,7 +3,7 @@ import logging
 
 from pydantic import BaseModel
 
-from pydantic_cli import run_and_exit, DefaultConfig
+from pydantic_cli import run_and_exit, CliConfig
 
 log = logging.getLogger(__name__)
 
@@ -11,13 +11,15 @@ log = logging.getLogger(__name__)
 class Options(BaseModel):
     """For cases where you want a global configuration file
     that is completely ignored if not found, you can set
-    CLI_JSON_VALIDATE_PATH = False.
+    cli_json_config_path = False.
     """
 
-    class Config(DefaultConfig):
-        CLI_JSON_ENABLE = True
-        CLI_JSON_CONFIG_PATH = "/path/to/file/that/does/not/exist/simple_schema.json"
-        CLI_JSON_VALIDATE_PATH = False
+    model_config = CliConfig(
+        frozen=True,
+        cli_json_config_path="/path/to/file/that/does/not/exist/simple_schema.json",
+        cli_json_enable=True,
+        cli_json_validate_path=False,
+    )
 
     input_file: str
     max_records: int = 10

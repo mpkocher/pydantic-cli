@@ -9,24 +9,22 @@ For example,
 my-tool alpha --help
 my-tool beta --help
 """
+
 import sys
 import logging
 import typing as T
 from pydantic import BaseModel, AnyUrl, Field
 
-from pydantic_cli.examples import ExampleConfigDefaults, LogLevel, prologue_handler
-from pydantic_cli import run_sp_and_exit, SubParser
+from pydantic_cli.examples import LogLevel, prologue_handler
+from pydantic_cli import run_sp_and_exit, SubParser, CliConfig
 
 log = logging.getLogger(__name__)
 
-
-class CustomConfig(ExampleConfigDefaults):
-    CLI_JSON_ENABLE = True
+CLI_CONFIG = CliConfig(cli_json_enable=True, frozen=True)
 
 
 class AlphaOptions(BaseModel):
-    class Config(CustomConfig):
-        pass
+    model_config = CLI_CONFIG
 
     input_file: str = Field(..., cli=("-i", "--input"))
     max_records: int = Field(10, cli=("-m", "--max-records"))
@@ -34,8 +32,7 @@ class AlphaOptions(BaseModel):
 
 
 class BetaOptions(BaseModel):
-    class Config(CustomConfig):
-        pass
+    model_config = CLI_CONFIG
 
     url: AnyUrl = Field(..., cli=("-u", "--url"))
     num_retries: int = Field(3, cli=("-n", "--num-retries"))

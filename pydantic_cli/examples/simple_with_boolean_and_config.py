@@ -5,18 +5,18 @@ This example will generate a CLI tool with 1 required argument and one optional 
 
 Note the optional boolean value must be supplied as `--run_training False`
 """
-from pydantic import BaseModel
 
-from pydantic_cli import run_and_exit, DefaultConfig
+from pydantic import BaseModel, Field
+
+from pydantic_cli import run_and_exit, CliConfig
 
 
 class Options(BaseModel):
-    class Config(DefaultConfig):
-        CLI_BOOL_PREFIX = ("--yes-", "--no-")
+    model_config = CliConfig(frozen=True)
 
     input_file: str
-    run_training: bool = True
-    dry_run: bool = False
+    run_training: bool = Field(default=False, cli=("-t", "--run-training"))
+    dry_run: bool = Field(default=False, cli=("-r", "--dry-run"))
 
 
 def example_runner(opts: Options) -> int:

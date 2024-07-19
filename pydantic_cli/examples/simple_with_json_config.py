@@ -16,18 +16,19 @@ is set to 'json-config` (which generates a `--json-config` commandline argument)
 
 Similarly, `CLI_JSON_ENABLE`
 """
+
 import logging
 from pydantic import BaseModel
-from pydantic_cli import run_and_exit, DefaultConfig
+from pydantic_cli import run_and_exit, CliConfig
 from pydantic_cli.examples import epilogue_handler, prologue_handler
 
 log = logging.getLogger(__name__)
 
 
 class Opts(BaseModel):
-    class Config(DefaultConfig):
-        CLI_JSON_KEY = "json-training"
-        CLI_JSON_ENABLE = True
+    model_config = CliConfig(
+        frozen=True, cli_json_key="json-training", cli_json_enable=True
+    )
 
     hdf_file: str
     max_records: int = 10

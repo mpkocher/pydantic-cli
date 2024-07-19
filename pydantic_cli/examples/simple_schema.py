@@ -5,16 +5,17 @@ that will be communicated in the output of `--help`.
 Note, that this leverages Pydantic's underlying validation mechanism. For example,
 `max_records` must be > 0.
 """
+
 from typing import Optional
 from pydantic import BaseModel, Field
 
-from pydantic_cli.examples import ExampleConfigDefaults
-from pydantic_cli import run_and_exit, HAS_AUTOCOMPLETE_SUPPORT
+from pydantic_cli import run_and_exit, HAS_AUTOCOMPLETE_SUPPORT, CliConfig
 
 
 class Options(BaseModel):
-    class Config(ExampleConfigDefaults):
-        CLI_SHELL_COMPLETION_ENABLE = HAS_AUTOCOMPLETE_SUPPORT
+    model_config = CliConfig(
+        frozen=True, cli_shell_completion_enable=HAS_AUTOCOMPLETE_SUPPORT
+    )
 
     input_file: str = Field(
         ...,
@@ -36,9 +37,8 @@ class Options(BaseModel):
         ...,
         title="Min Score",
         description="Minimum Score Filter that will be applied to the records",
-        cli=("-s",),
-        gt=0
-        # or extras={'cli': ('-s', '--min-filter-score', )}
+        cli=("-s", "--min-filter-score"),
+        gt=0,
     )
 
     max_filter_score: Optional[float] = Field(
@@ -46,16 +46,20 @@ class Options(BaseModel):
         title="Max Score",
         description="Maximum Score Filter that will be applied to the records",
         gt=0,
-        cli=("-S",)
-        # or extras={'cli': ('-S', '--min-filter-score', )}
+        cli=("-S", "--max-filter-score"),
+    )
+
+    name: Optional[str] = Field(
+        title="Filter Name",
+        description="Name to Filter on.",
+        cli=("-n", "--filter-name"),
     )
 
 
 def example_runner(opts: Options) -> int:
     print(f"Mock example running with options {opts}")
-    print((opts.input_file, type(opts.input_file)))
-    print(opts.max_records, type(opts.max_records))
-    print(opts.min_filter_score, type(opts.min_filter_score))
+    for x in (opts.input_file, opts.max_records, opts.min_filter_score, opts.name):
+        print(f"{x} type={type(x)}")
     return 0
 
 

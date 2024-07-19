@@ -12,21 +12,21 @@ In this example, the `prologue_handler` sets up the application logging using lo
 and the `epilogue_handler` will log the runtime and the exit code after the main execution function
 is called.
 """
+
 import sys
 import logging
 
 from pydantic import BaseModel, Field
 
 from pydantic_cli import __version__
-from pydantic_cli import run_and_exit
-from pydantic_cli.examples import ExampleConfigDefaults, LogLevel
+from pydantic_cli import run_and_exit, CliConfig
+from pydantic_cli.examples import LogLevel
 
 log = logging.getLogger(__name__)
 
 
 class Options(BaseModel):
-    class Config(ExampleConfigDefaults):
-        pass
+    model_config = CliConfig(frozen=True)
 
     input_file: str = Field(..., cli=("-i", "--input"))
     max_records: int = Field(10, cli=("-m", "--max-records"))

@@ -2,22 +2,21 @@
 Example that adds an option to emit shell autocomplete for bash/zsh
 requires `shtab` to be installed.
 """
+
 import sys
 import logging
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from pydantic_cli import __version__
-from pydantic_cli import run_and_exit, DefaultConfig
-from pydantic_cli.examples import ExampleConfigDefaults
+from pydantic_cli import run_and_exit, CliConfig
 from pydantic_cli.shell_completion import HAS_AUTOCOMPLETE_SUPPORT
 
 log = logging.getLogger(__name__)
 
 
 class Options(BaseModel):
-    class Config(ExampleConfigDefaults, DefaultConfig):
-        CLI_SHELL_COMPLETION_ENABLE = HAS_AUTOCOMPLETE_SUPPORT
+    model_config = CliConfig(cli_shell_completion_enable=HAS_AUTOCOMPLETE_SUPPORT)
 
     input_file: str = Field(..., cli=("-i", "--input"))
     min_filter_score: float = Field(..., cli=("-f", "--filter-score"))
