@@ -2,7 +2,7 @@
 
 Turn Pydantic defined Data Models into CLI Tools and enable loading values from JSON files
 
-**Requires Pydantic** `>=1.5.1`. 
+**Requires Pydantic** `>=2.8.2`. 
 
 [![Downloads](https://pepy.tech/badge/pydantic-cli)](https://pepy.tech/project/pydantic-cli)
 
@@ -18,17 +18,23 @@ pip install pydantic-cli
 
 1. Thin Schema driven interfaces constructed from [Pydantic](https://github.com/samuelcolvin/pydantic) defined data models
 1. Validation is performed in a single location as defined by Pydantic's validation model and defined types
-1. CLI parsing is only structurally validating that the args or optional arguments are provided
+1. CLI parsing level is only structurally validating that the args or optional arguments are provided
 1. Enable loading config defined in JSON to override or set specific values
 1. Clear interface between the CLI and your application code
 1. Leverage the static analyzing tool [**mypy**](http://mypy.readthedocs.io) to catch type errors in your commandline tool   
 1. Easy to test (due to reasons defined above)
 
-### Motivating Usecases
+### Motivating Use cases
 
 - Quick scrapy commandline tools for local development (e.g., webscraper CLI tool, or CLI application that runs a training algo)
 - Internal tools driven by a Pydantic data model/schema
 - Configuration heavy tools that are driven by either partial (i.e, "presets") or complete configuration files defined using JSON
+
+Note: Newer version of `Pydantic-settings` has support for commandline functionality. 
+
+https://docs.pydantic.dev/2.8/concepts/pydantic_settings/#settings-management
+
+`Pydantic-cli` predates the CLI component of `pydantic-settings` and has a few different requirements.
 
 ## Quick Start
 
@@ -107,7 +113,6 @@ if __name__ == '__main__':
     run_and_exit(MinOptions, example_runner, description="My Tool Description", version='0.1.0')
 ```
 
-**WARNING**: Data models that have boolean values and generated CLI flags (e.g., `--enable-filter` or `--disable-filter`) require special attention. See the "Defining Boolean Flags" section for more details. 
 
 Leveraging `Field` is also useful for validating inputs. 
 
@@ -123,7 +128,7 @@ class MinOptions(BaseModel):
 
 ## Loading Configuration using JSON
 
-Tools can also load entire models or partially defined Pydantic data models from JSON files.
+User created commandline tools using `pydantic-cli` can also load entire models or **partially** defined Pydantic data models from JSON files.
 
 
 For example, given the following Pydantic data model:
@@ -157,7 +162,7 @@ Can be run with a JSON file that defines all the (required) values.
 {"hdf_file": "/path/to/file.hdf5", "max_records": 5, "min_filter_score": 1.5, "alpha": 1.0, "beta": 1.0}
 ```
 
-The tool can be executed as shown below. Note, options required at the commandline as defined in the `Opts` model (e.g., 'hdf_file', 'min_filter_score', 'alpha' and 'beta') are NO longer required values supplied to the commandline tool.
+The tool can be executed as shown below. Note, options required at the commandline as defined in the `Opts` model (e.g., 'hdf_file', 'min_filter_score', 'alpha' and 'beta') are **NO longer required** values supplied to the commandline tool.
 ```bash
 my-tool --json-config /path/to/file.json
 ```
@@ -270,119 +275,47 @@ Found 1 error in 1 file (checked 1 source file)
 
 ```
 
-## Defining Boolean Flags
+## Using Boolean Flags
 
-There are a few common cases of boolean values:
+There's an ergonomic tradeoff to lean on Pydantic to avoid some friction points at CLI level. This yields an explicit model, but added verboseness.
 
-1. `x:bool = True|False` A bool field with a default value
-2. `x:bool` A required bool field
-3. `x:Optional[bool]` or `x:Optional[bool] = None` An optional boolean with a default value of None
-4. `x:Optional[bool] = Field(...)` a required boolean that can be set to `None`, `True` or `False` in Pydantic.
+Summary:
 
-Case 1 is very common and the semantics of the custom CLI overrides (as a tuple) **are different than the cases 2-4**.
-Case 4 has limitations. It isn't possible to set `None` from the commandline when the default is `True` or `False`.
+- `xs:bool` can be set from commandline as `--xs true` or `--xs false`. Or [using Pydantic's casting](https://docs.pydantic.dev/2.8/api/standard_library_types/#booleans), `--xs yes` or `--xs y`. 
+- `xs:Optional[bool]` can be set from commandline as `--xs true`, `--xs false`, or `--xs none`
 
-### Boolean Field with Default
+For the `None` case, you can configure your Pydantic model to handle the casting/coercing/validation. Similarly, the bool casting should be configured in Pydantic.
 
-As demonstrated in a previous example, the common case of defining a type as `bool` with a default value work as expected.
-
-For example:
-
-
-```python
-from pydantic import BaseModel
-
-
-class MinOptions(BaseModel):
-    debug: bool = False
-```
-
-
-By default, when defining a model with a boolean flag, an "enable" or "disable" prefix will be added to create the commandline flag depending on the default value.
-
-In this specific case, a commandline flag of `--enable-debug` which will set `debug` in the Pydantic model to `True`. 
-
-If the default was set to `False`, then a `--disable-debug` flag would be created and would set `debug` to `False` in the Pydantic data model.
-
-The CLI flag can be customized and provided as a `Tuple[str]` or `Tuple[str, str]` as (long, ) or (short, long) flags (respectively) to negate the default value. 
-
-For example, running `-d` or `--debug` will set `debug` to `True` in the Pydantic data model.
-
-```python
-from pydantic import BaseModel, Field
-
-
-class MinOptions(BaseModel):
-    debug: bool = Field(False, description="Enable debug mode", cli=('-d', '--debug'))
-```
-
-If the default is `True`, running the example below with `--disable-debug` will set `debug` to `False`.
-
-```python
-from pydantic import BaseModel, Field
-
-
-class MinOptions(BaseModel):
-    debug: bool = Field(True, description="Disable debug mode", cli=('-d', '--disable-debug'))
-```
-
-### Boolean Required Field
-
-Required boolean fields are handled a bit different than cases where a boolean is provided with a default value.
-
-Specifically, the custom flag `Tuple[str, str]` must be provided as a `(--enable, --disable)` format.
-
-```python
-from pydantic import BaseModel, Field
-
-
-class MinOptions(BaseModel):
-    debug: bool = Field(..., description="Enable/Disable debugging", cli= ('--enable-debug', '--disable-debug'))
-```
-**Currently, supplying the short form of each "enable" and "disable" is not supported**. 
-
-### Optional Boolean Fields
-
-Similar to the required boolean fields case, `Optional[bool]` cases have the same (--enable, --disable) semantics.
+Consider a basic model:
 
 ```python
 from typing import Optional
 from pydantic import BaseModel, Field
-
-
-class MinOptions(BaseModel):
-    a: Optional[bool]
-    b: Optional[bool] = None
-    c: Optional[bool] = Field(None, cli= ('--yes-c', '--no-c'))
-    d: Optional[bool] = Field(False, cli=('--enable-d', '--disable-d'))
-    e: Optional[bool] = Field(..., cli=('--enable-e', '--disable-e'))
-```
-Note, that `x:Optional[bool]`, `x:Optional[bool] = None`, `x:Optional[bool] = Field(None)` semantically mean the same thing in Pydantic.
-
-In each of the above cases, the **custom CLI flags must be provided as (--enable, --disable) format**.
-
-Also, note it isn't possible to set `None` from the commandline for the `Optional[bool] = False` or `Optional[bool] = Field(...)` case.
-
-### Customizing default Enable/Disable Bool Prefix
-
-The enable/disable prefix used for all `bool` options can be customized by setting the `Tuple[str, str]` of `CLI_BOOL_PREFIX` on `Config` to the (positive, negative) of prefix flag.
-
-The default value of `Config.CLI_BOOL_PREFIX` is `('--enable-', '--disable')`. 
-
-
-```python
-from pydantic import BaseModel
-
+from pydantic_cli import run_and_exit
 
 class Options(BaseModel):
-    class Config:
-        CLI_BOOL_PREFIX = ('--yes-', '--no-')
-    
-    debug: bool = False
-```
-This will generate an optional `--yes-debug` flag that will set `debug` from the default (`False`) to `True` in the Pydantic data model.
+    input_file: str
+    dry_run: bool = Field(default=False, description="Enable dry run mode", cli=('-r', '--dry-run'))
+    filtering: Optional[bool]
 
-In many cases, **it's best to customize the commandline boolean flags** to avoid ambiguities or confusion.
+
+def example_runner(opts: Options) -> int:
+    print(f"Mock example running with {opts}")
+    return 0
+
+
+if __name__ == "__main__":
+    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")
+```
+
+In this case, 
+
+- `dry_run` is an optional value with a default and can be set as `--dry-run yes` or `--dry-run no`
+- `filtering` is a required value and can be set `--filtering true`, `--filtering False`, and `--filtering None`   
+
+See the Pydantic docs for more details on boolean casting.
+
+https://docs.pydantic.dev/2.8/api/standard_library_types/#booleans
 
 
 ## Customization and Hooks
@@ -525,7 +458,6 @@ Pydantic-cli attempts to stylistically follow Pydantic's approach using a class 
 
 ```python
 import typing as T
-from pydantic_cli import CustomOptsType
 
 class DefaultConfig:
     """
@@ -728,11 +660,10 @@ For example:
 
 ```python
 from pydantic import BaseModel
-from pydantic_cli import DefaultConfig
+from pydantic_cli import CliConfig
 
 class MinOptions(BaseModel):
-    class Config(DefaultConfig):
-        CLI_JSON_ENABLE = True
+    model_config = CliConfig(cli_json_enable=True)
     
     input_file: str
     input_hdf: str
@@ -771,11 +702,10 @@ The simplest fix is to remove the positional arguments in favor of `-i` or simil
 
 ```python
 from pydantic import BaseModel, Field
-from pydantic_cli import run_and_exit, to_runner, DefaultConfig
+from pydantic_cli import run_and_exit, to_runner, CliConfig
 
 class MinOptions(BaseModel):
-    class Config(DefaultConfig):
-        CLI_JSON_ENABLE = True
+    model_config = CliConfig(cli_json_enable=True)
     
     input_file: str = Field(..., cli=('-i', ))
     input_hdf: str = Field(..., cli=('-d', '--hdf'))
