@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## Version 5.0.0 (Pydantic 2 support)
+
+- Support for Pydantic >= 2.8
+- Pydantic 2 has a different "optional" definition
+- Use `CliConfig` instead of `DefaultConfig`
+- Many backward incompatible changes to how `bool` are used. Use Pydantic bool casting (e.g., `--dry-run y`, or `--dry-run true`). 
+- There's `mypy` related issues with `Field( ......, cli=('-x', '--filter'))`. I don't think pydantic should remove the current `extra` functionality. 
+
+
 ## Version 4.3.0
 
 - Leverage Pydantic validation for enum choices, enabling more complex use-cases
