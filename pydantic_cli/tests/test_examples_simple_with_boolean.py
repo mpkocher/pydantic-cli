@@ -10,14 +10,16 @@ class TestExamples(_TestHarness[Options]):
         self.run_config(["--input_file", "/path/to/file.txt"])
 
     def test_simple_02(self):
-        self.run_config(["--input_file", "/path/to/file.txt", "--disable-run_training"])
+        self.run_config(["--input_file", "/path/to/file.txt", "--run_training", "y"])
 
     def test_simple_03(self):
         self.run_config(
             [
                 "--input_file",
                 "/path/to/file.txt",
-                "--disable-run_training",
-                "--enable-dry_run",
+                "--run_training",
+                "true",
+                "--dry_run",
+                "true",
             ]
         )
