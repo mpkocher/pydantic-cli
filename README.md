@@ -18,8 +18,8 @@ pip install pydantic-cli
 
 1. Thin Schema driven interfaces constructed from [Pydantic](https://github.com/samuelcolvin/pydantic) defined data models
 1. Validation is performed in a single location as defined by Pydantic's validation model and defined types
-1. CLI parsing level is only structurally validating that the args or optional arguments are provided
-1. Enable loading config defined in JSON to override or set specific values
+1. The CLI parsing level is only structurally validating the args or optional arguments/flags are provided
+1. Enable loading config defined in JSON to override or set specific values (e.g. `mytool -i in.csv --json-conf config.json`)
 1. Clear interface between the CLI and your application code
 1. Leverage the static analyzing tool [**mypy**](http://mypy.readthedocs.io) to catch type errors in your commandline tool   
 1. Easy to test (due to reasons defined above)
@@ -30,11 +30,11 @@ pip install pydantic-cli
 - Internal tools driven by a Pydantic data model/schema
 - Configuration heavy tools that are driven by either partial (i.e, "presets") or complete configuration files defined using JSON
 
-Note: Newer version of `Pydantic-settings` has support for commandline functionality. 
+Note: Newer version of `Pydantic-settings` has support for commandline functionality. It allows mixing of "sources", such as ENV, YAML, JSON and might satisfy your requirements.  
 
 https://docs.pydantic.dev/2.8/concepts/pydantic_settings/#settings-management
 
-`Pydantic-cli` predates the CLI component of `pydantic-settings` and has a few different requirements.
+`Pydantic-cli` predates the CLI component of `pydantic-settings` and has a few different requirements and design approach. 
 
 ## Quick Start
 
@@ -93,6 +93,8 @@ Custom 'short' or 'long' forms of the commandline args can be provided by using 
 
 **Note**, Pydantic interprets `...` as a "required" value when used in `Field`.
 
+https://docs.pydantic.dev/latest/concepts/models/#required-fields
+
 ```python
 from pydantic import BaseModel, Field
 from pydantic_cli import run_and_exit
@@ -113,8 +115,15 @@ if __name__ == '__main__':
     run_and_exit(MinOptions, example_runner, description="My Tool Description", version='0.1.0')
 ```
 
+Running
 
-Leveraging `Field` is also useful for validating inputs. 
+```bash
+$> mytool -i input.hdf5 --max-records 100 --debug y
+Mock example running with options MinOptions(input_file="input.hdf5", max_records=100, debug=True)
+```
+
+
+Leveraging `Field` is also useful for validating inputs using the standard Pydantic for validation.  
 
 ```python
 from pydantic import BaseModel, Field
@@ -123,24 +132,28 @@ from pydantic import BaseModel, Field
 class MinOptions(BaseModel):
     input_file: str = Field(..., description="Path to Input H5 file", cli=('-i', '--input-file'))
     max_records: int = Field(..., gt=0, lte=1000, description="Max records to process", cli=('-m', '--max-records'))
-
 ```
+
+See [Pydantic docs](https://docs.pydantic.dev/latest/concepts/validators/) for more details.
 
 ## Loading Configuration using JSON
 
 User created commandline tools using `pydantic-cli` can also load entire models or **partially** defined Pydantic data models from JSON files.
 
 
-For example, given the following Pydantic data model:
+For example, given the following Pydantic data model with the `cli_json_enable = True` in `CliConfig`. 
+
+The `cli_json_key` will define the commandline argument (e.g., `config` will translate to `--config`). The default value is `json-config` (`--json-config`).
 
 ```python
 from pydantic import BaseModel
-from pydantic_cli import run_and_exit, DefaultConfig
+from pydantic_cli import CliConfig, run_and_exit
 
 class Opts(BaseModel):
-    class Config(DefaultConfig):
-        CLI_JSON_ENABLE = True
-    
+    model_config = CliConfig(
+        frozen=True, cli_json_key="json-training", cli_json_enable=True
+    )
+
     hdf_file: str
     max_records: int = 10
     min_filter_score: float
@@ -164,7 +177,7 @@ Can be run with a JSON file that defines all the (required) values.
 
 The tool can be executed as shown below. Note, options required at the commandline as defined in the `Opts` model (e.g., 'hdf_file', 'min_filter_score', 'alpha' and 'beta') are **NO longer required** values supplied to the commandline tool.
 ```bash
-my-tool --json-config /path/to/file.json
+my-tool --json-training /path/to/file.json
 ```
 
 To override values in the JSON config file, or provide the missing required values, simply provide the values at the commandline.
@@ -172,7 +185,7 @@ To override values in the JSON config file, or provide the missing required valu
 These values **will override** values defined in the JSON config file. The provides a general mechanism of using configuration "preset" files. 
 
 ```bash
-my-tool --json-config /path/to/file.json --alpha -1.8 --max_records 100 
+my-tool --json-training /path/to/file.json --alpha -1.8 --max_records 100 
 ```
 
 Similarly, a partially described data model can be used combined with explict values provided at the commandline.
@@ -184,8 +197,10 @@ In this example, `hdf_file` and `min_filter_score` are still required values tha
 ``` 
 
 ```bash
-my-tool --json-config /path/to/file.json --hdf_file /path/to/file.hdf5 --min_filter_score -12.34
+my-tool --json-training /path/to/file.json --hdf_file /path/to/file.hdf5 --min_filter_score -12.34
 ```
+
+**Note:** The mixing and matching of a config/preset JSON file and commandline args is the fundamental design requirement of `pydantic-cli`. 
 
 ## Catching Type Errors with mypy
 
@@ -277,7 +292,7 @@ Found 1 error in 1 file (checked 1 source file)
 
 ## Using Boolean Flags
 
-There's an ergonomic tradeoff to lean on Pydantic to avoid some friction points at CLI level. This yields an explicit model, but added verboseness.
+There's an ergonomic tradeoff to lean on Pydantic and avoid some friction points at CLI level. This yields an explicit model, but slight added verboseness.
 
 Summary:
 
@@ -295,7 +310,8 @@ from pydantic_cli import run_and_exit
 
 class Options(BaseModel):
     input_file: str
-    dry_run: bool = Field(default=False, description="Enable dry run mode", cli=('-r', '--dry-run'))
+    max_records: int = Field(100, cli=('-m', '--max-records'))
+    dry_run: bool = Field(default=False, description="Enable dry run mode", cli=('-d', '--dry-run'))
     filtering: Optional[bool]
 
 
@@ -320,14 +336,6 @@ https://docs.pydantic.dev/2.8/api/standard_library_types/#booleans
 
 ## Customization and Hooks
 
-If the `description` is not defined and the Pydantic data model fields are tersely named (e.g., 'total', or 'n'), this can yield a call to `--help` that is quite minimal (due to the lack of metadata). However, verbosely named arguments can often be good enough to communicate the intent of the commandline interface.
-
-
-For customization of the CLI args, such as max number of records is `-m 1234` in the above example, there are two approaches.
-
-- The first is the **quick** method that is a minor change to the core `Config` of the Pydantic Data model. 
-- The second method is use Pydantic's "Field" metadata model is to define richer set of metadata. See [`Field` model in Pydantic](https://pydantic-docs.helpmanual.io/usage/schema/) more details. 
-
 
 ## Hooks into the CLI Execution
 
@@ -337,7 +345,7 @@ There are three core hooks into the customization of CLI execution.
 - prologue handler (pre-execution hook)
 - epilogue handler (post-execution hook)
 
-Both of these cases can be customized to by passing in a function to the running/execution method. 
+Both of these cases can be customized by passing in a function to the running/execution method. 
 
 
 The exception handler should handle any logging or writing to stderr as well as mapping the specific exception to non-zero integer exit code. 
@@ -360,7 +368,7 @@ def example_runner(opts: MinOptions) -> int:
     return 0
 
 
-def custom_exception_handler(ex) -> int:
+def custom_exception_handler(ex: Exception) -> int:
     exception_map = dict(ValueError=3, IOError=7)
     sys.stderr.write(str(ex))
     exit_code = exception_map.get(ex.__class__, 1)
@@ -395,7 +403,7 @@ Similarly, the post execution hook can be called. This function is `Callable[[in
 from pydantic_cli import run_and_exit
 
 
-def custom_epilogue_handler(exit_code: int, run_time_sec:float):
+def custom_epilogue_handler(exit_code: int, run_time_sec:float) -> None:
     m = "Success" if exit_code else "Failed"
     msg = f"Completed running ({m}) in {run_time_sec:.2f} sec"
     print(msg)
@@ -458,34 +466,27 @@ Pydantic-cli attempts to stylistically follow Pydantic's approach using a class 
 
 ```python
 import typing as T
+from pydantic import ConfigDict
 
-class DefaultConfig:
-    """
-    Core Default Config "mixin" for CLI configuration.
-    """
 
+class CliConfig(ConfigDict, total=False):
     # value used to generate the CLI format --{key}
-    CLI_JSON_KEY: str = "json-config"
+    cli_json_key: str
     # Enable JSON config loading
-    CLI_JSON_ENABLE: bool = False
+    cli_json_enable: bool
 
     # Set the default ENV var for defining the JSON config path
-    CLI_JSON_CONFIG_ENV_VAR: str = "PCLI_JSON_CONFIG"
+    cli_json_config_env_var: str
     # Set the default Path for JSON config file
-    CLI_JSON_CONFIG_PATH: T.Optional[str] = None
+    cli_json_config_path: T.Optional[str]
     # If a default path is provided or provided from the commandline
-    CLI_JSON_VALIDATE_PATH: bool = True
-
-    # Customize the default prefix that is generated
-    # if a boolean flag is provided. Boolean custom CLI
-    # MUST be provided as Tuple[str, str]
-    CLI_BOOL_PREFIX: T.Tuple[str, str] = ("--enable-", "--disable-")
+    cli_json_validate_path: bool
 
     # Add a flag that will emit the shell completion
     # this requires 'shtab'
     # https://github.com/iterative/shtab
-    CLI_SHELL_COMPLETION_ENABLE: bool = False
-    CLI_SHELL_COMPLETION_FLAG: str = "--emit-completion"
+    cli_shell_completion_enable: bool
+    cli_shell_completion_flag: str
 ```
 
 ## AutoComplete leveraging shtab
@@ -497,13 +498,13 @@ The **optional** dependency can be installed as follows.
 pip install "pydantic-cli[shtab]"
 ```
 
-To enable the emitting of bash/zsh autocomplete files from shtab, set `CLI_SHELL_COMPLETION_ENABLE: bool = True` in your data model `Config`.
+To enable the emitting of bash/zsh autocomplete files from shtab, set `CliConfig(cli_shell_completion_enable=True)` in your data model config.
 
 Then use your executable (or `.py` file) emit the autocomplete file to the necessary output directory. 
 
 For example, using `zsh` and a script call `my-tool.py`, `my-tool.py --emit-completion zsh > ~/.zsh/completions/_my-tool.py`. By convention/default, the executable name must be prefixed with an underscore.  
 
-When using autocomplete it should looks similar to this. 
+When using autocomplete it should look similar to this. 
 
 
 ```bash
@@ -526,12 +527,10 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 
 At a high level, `pydantic_cli` is (hopefully) a thin bridge between your `Options` defined as a Pydantic model and your 
 main `runner(opts: Options)` func that has hooks into the startup, shutdown and error handling of the command line tool. 
-It also supports loading config files defined as JSON. By design, `pydantic_cli` explicitly doesn't expose, or leak the argparse instance 
-because it would add too much surface area and it would enable users' to start mucking with the argparse instance in all kinds of unexpected ways. 
-The use of `argparse` internally is an hidden implementation detail.
+It also supports loading config files defined as JSON. By design, `pydantic_cli` explicitly **does not expose, or leak the argparse instance** or implementation details. 
+Argparse is a bit thorny and was written in a different era of Python. Exposing these implementation details would add too much surface area and would enable users' to start mucking with the argparse instance in all kinds of unexpected ways. 
 
 Testing can be done by leveraging the `to_runner` interface.  
-
 
 
 1. It's recommend trying to do the majority of testing via unit tests (independent of `pydantic_cli`) with your main function and different instances of your pydantic data model.
@@ -642,8 +641,7 @@ The [TestHarness](https://github.com/mpkocher/pydantic-cli/blob/master/pydantic_
 
 - **Positional Arguments are not supported** (See more info in the next subsection)
 - Using Pydantic BaseSettings to set values from `dotenv` or ENV variables is **not supported**. Loading `dotenv` or similar in Pydantic overlapped and competed too much with the "preset" JSON loading model in `pydantic-cli`.
-- [Pydantic has a perhaps counterintuitive model that sets default values based on the Type signature](https://pydantic-docs.helpmanual.io/usage/models/#required-optional-fields). For `Optional[T]` with NO default assign, a default of `None` is assigned. This can sometimes yield surprising commandline args generated from the Pydantic data model. 
-- Currently **only support "simple" types** (e.g., floats, ints, strings, boolean) and limited support for fields defined as `List[T]`, `Set[T]` and simple `Enum`s. There is **no support** for nested models.
+- Currently **only support "simple" types** (e.g., floats, ints, strings, boolean) and limited support for fields defined as `List[T]`, `Set[T]` and simple `Enum`s. There is **no support** for nested models. Pydantic-settings might be a better fit for these cases.
 - Leverages [argparse](https://docs.python.org/3/library/argparse.html#module-argparse) underneath the hood (argparse is a bit thorny of an API to build on top of).
 
 ## Why are Positional Arguments not supported?
@@ -736,6 +734,7 @@ This consistency was the motivation for removing positional argument support in 
 
 Other tools that leverage type annotations to create CLI tools. 
 
+- [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/#command-line-support) Pydantic >= 2.8.2 supports CLI as a settings "source". 
 - [cyto](https://github.com/sbtinstruments/cyto) Pydantic based model leveraging Pydantic's settings sources. Supports nested values. Optional TOML support. (Leverages: click, pydantic)
 - [typer](https://github.com/tiangolo/typer) Typer is a library for building CLI applications that users will love using and developers will love creating. Based on Python 3.6+ type hints. (Leverages: click)
 - [glacier](https://github.com/relastle/glacier) Building Python CLI using docstrings and typehints (Leverages: click)
