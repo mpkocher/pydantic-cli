@@ -67,7 +67,7 @@ class EagerVersionAction(Action):
 
 
 class CustomArgumentParser(ArgumentParser):
-    def exit(self, status: int = 0, message: T.Optional[str] = None) -> T.NoReturn:  # type: ignore
+    def exit(self, status: int = 0, message: str | None = None) -> T.NoReturn:  # type: ignore
         # THIS IS NO longer used because of the custom Version and Help
         # This is a bit of an issue to return the exit code properly
         # log.debug(f"{self} Class:{self.__class__.__name__} called exit()")
@@ -77,7 +77,7 @@ class CustomArgumentParser(ArgumentParser):
             )
 
 
-def _parser_add_help(p: CustomArgumentParser):
+def _parser_add_help(p: CustomArgumentParser) -> CustomArgumentParser:
     p.add_argument(
         "--help", help="Print Help and Exit", action=EagerHelpAction, default=SUPPRESS
     )
