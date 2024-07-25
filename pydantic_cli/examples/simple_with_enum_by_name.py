@@ -16,7 +16,7 @@ from pydantic import (
 )
 from pydantic_core import CoreSchema, core_schema
 
-from pydantic_cli import run_and_exit
+from pydantic_cli import run_and_exit, Cmd
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ class State(str, CastAbleEnumMixin, Enum):
 STATE = Annotated[State, BeforeValidator(State.validate)]
 
 
-class Options(BaseModel):
+class Options(Cmd):
     states: Annotated[
         Set[STATE],
         Field(
@@ -96,11 +96,9 @@ class Options(BaseModel):
     ]
     max_records: int = 100
 
-
-def example_runner(opts: Options) -> int:
-    print(f"Mock example running with {opts}")
-    return 0
+    def run(self) -> None:
+        print(f"Mock example running with {self}")
 
 
 if __name__ == "__main__":
-    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")
+    run_and_exit(Options, description=__doc__, version="0.1.0")

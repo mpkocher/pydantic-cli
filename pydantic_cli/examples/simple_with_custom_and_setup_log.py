@@ -18,20 +18,25 @@ import logging
 
 from pydantic import BaseModel, Field
 
-from pydantic_cli import __version__
+from pydantic_cli import __version__, Cmd
 from pydantic_cli import run_and_exit, CliConfig
 from pydantic_cli.examples import LogLevel
 
 log = logging.getLogger(__name__)
 
 
-class Options(BaseModel):
+class Options(Cmd):
     model_config = CliConfig(frozen=True)
 
     input_file: str = Field(..., cli=("-i", "--input"))
     max_records: int = Field(10, cli=("-m", "--max-records"))
     # this leverages Pydantic's fundamental understanding of Enums
     log_level: LogLevel = LogLevel.INFO
+
+    def run(self) -> None:
+        log.info(
+            f"pydantic_cli version={__version__} Mock example running with options {self}"
+        )
 
 
 def prologue_handler(opts: Options):
@@ -52,17 +57,9 @@ def epilogue_handler(exit_code: int, run_time_sec: float):
     )
 
 
-def example_runner(opts: Options) -> int:
-    log.info(
-        f"pydantic_cli version={__version__} Mock example running with options {opts}"
-    )
-    return 0
-
-
 if __name__ == "__main__":
     run_and_exit(
         Options,
-        example_runner,
         description=__doc__,
         version="0.1.0",
         prologue_handler=prologue_handler,

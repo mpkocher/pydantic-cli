@@ -1,10 +1,10 @@
-from pydantic_cli.examples.simple_with_boolean import Options, example_runner
+from pydantic_cli.examples.simple_with_boolean import Options
 
 from . import _TestHarness, HarnessConfig
 
 
 class TestExamples(_TestHarness[Options]):
-    CONFIG = HarnessConfig(Options, example_runner)
+    CONFIG = HarnessConfig(Options)
 
     def test_simple_01(self):
         self.run_config(["--input_file", "/path/to/file.txt"])

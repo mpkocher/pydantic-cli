@@ -55,23 +55,21 @@ Explicit example show below.
 
 ```python
 import sys
+from pydantic_cli import run_and_exit, to_runner, Cmd
 
-from pydantic import BaseModel
-from pydantic_cli import run_and_exit, to_runner
 
-class MinOptions(BaseModel):
+class MinOptions(Cmd):
     input_file: str
     max_records: int
 
+    def run(self) -> None:
+        print(f"Mock example running with {self}")
 
-def example_runner(opts: MinOptions) -> int:
-    print(f"Mock example running with options {opts}")
-    return 0
 
 if __name__ == '__main__':
     # to_runner will return a function that takes the args list to run and 
     # will return an integer exit code
-    sys.exit(to_runner(MinOptions, example_runner, version='0.1.0')(sys.argv[1:]))
+    sys.exit(to_runner(MinOptions, version='0.1.0')(sys.argv[1:]))
 
 ```
 
@@ -79,7 +77,7 @@ Or to implicitly use `sys.argv[1:]`, leverage `run_and_exit` (`to_runner` is als
 
 ```python
 if __name__ == '__main__':
-    run_and_exit(MinOptions, example_runner, description="My Tool Description", version='0.1.0')
+    run_and_exit(MinOptions, description="My Tool Description", version='0.1.0')
 
 ```
 
@@ -96,23 +94,21 @@ Custom 'short' or 'long' forms of the commandline args can be provided by using 
 https://docs.pydantic.dev/latest/concepts/models/#required-fields
 
 ```python
-from pydantic import BaseModel, Field
-from pydantic_cli import run_and_exit
+from pydantic import Field
+from pydantic_cli import run_and_exit, Cmd
 
 
-class MinOptions(BaseModel):
+class MinOptions(Cmd):
     input_file: str = Field(..., description="Path to Input H5 file", cli=('-i', '--input-file'))
     max_records: int = Field(..., description="Max records to process", cli=('-m', '--max-records'))
     debug: bool = Field(False, description="Enable debugging mode", cli= ('-d', '--debug'))
 
-    
-def example_runner(opts: MinOptions) -> int:
-    print(f"Mock example running with options {opts}")
-    return 0
+    def run(self) -> None:
+        print(f"Mock example running with options {self}")
 
 
 if __name__ == '__main__':
-    run_and_exit(MinOptions, example_runner, description="My Tool Description", version='0.1.0')
+    run_and_exit(MinOptions, description="My Tool Description", version='0.1.0')
 ```
 
 Running
@@ -126,12 +122,16 @@ Mock example running with options MinOptions(input_file="input.hdf5", max_record
 Leveraging `Field` is also useful for validating inputs using the standard Pydantic for validation.  
 
 ```python
-from pydantic import BaseModel, Field
+from pydantic import Field
+from pydantic_cli import Cmd
 
 
-class MinOptions(BaseModel):
+class MinOptions(Cmd):
     input_file: str = Field(..., description="Path to Input H5 file", cli=('-i', '--input-file'))
     max_records: int = Field(..., gt=0, lte=1000, description="Max records to process", cli=('-m', '--max-records'))
+
+    def run(self) -> None:
+        print(f"Mock example running with options {self}")
 ```
 
 See [Pydantic docs](https://docs.pydantic.dev/latest/concepts/validators/) for more details.
@@ -146,10 +146,9 @@ For example, given the following Pydantic data model with the `cli_json_enable =
 The `cli_json_key` will define the commandline argument (e.g., `config` will translate to `--config`). The default value is `json-config` (`--json-config`).
 
 ```python
-from pydantic import BaseModel
-from pydantic_cli import CliConfig, run_and_exit
+from pydantic_cli import CliConfig, run_and_exit, Cmd
 
-class Opts(BaseModel):
+class Opts(Cmd):
     model_config = CliConfig(
         frozen=True, cli_json_key="json-training", cli_json_enable=True
     )
@@ -159,13 +158,12 @@ class Opts(BaseModel):
     min_filter_score: float
     alpha: float
     beta: float
-
-def runner(opts: Opts):
-    print(f"Running with opts:{opts}")
-    return 0
+    
+    def run(self) -> None:
+        print(f"Running with opts:{self}")
 
 if __name__ == '__main__':
-    run_and_exit(Opts, runner, description="My Tool Description", version='0.1.0')
+    run_and_exit(Opts, description="My Tool Description", version='0.1.0')
 
 ```
 
@@ -258,37 +256,23 @@ With `pydantic-cli`, it's possible to catch these errors by running `mypy`. This
 For example,
 
 ```python
-from pydantic import BaseModel
-
-from pydantic_cli import run_and_exit
+from pydantic_cli import run_and_exit, Cmd
 
 
-class Options(BaseModel):
+class Options(Cmd):
     input_file: str
     max_records: int
 
-
-def bad_func(n: int) -> int:
-    return 2 * n
-
-
-def example_runner(opts: Options) -> int:
-    print(f"Mock example running with {opts}")
-    return 0
+    def run(self) -> None:
+        print(f"Mock example running with {self.max_score}")
 
 
 if __name__ == "__main__":
-    run_and_exit(Options, bad_func, version="0.1.0")
+    run_and_exit(Options, version="0.1.0")
 ```
 
-With `mypy`, it's possible to proactively catch this types of errors. 
+With `mypy`, it's possible to proactively catch these types of errors. 
 
-```bash
- mypy pydantic_cli/examples/simple.py                                                                                                                                                                  ✘ 1 
-pydantic_cli/examples/simple.py:36: error: Argument 2 to "run_and_exit" has incompatible type "Callable[[int], int]"; expected "Callable[[Options], int]"
-Found 1 error in 1 file (checked 1 source file)
-
-```
 
 ## Using Boolean Flags
 
@@ -305,23 +289,21 @@ Consider a basic model:
 
 ```python
 from typing import Optional
-from pydantic import BaseModel, Field
-from pydantic_cli import run_and_exit
+from pydantic import Field
+from pydantic_cli import run_and_exit, Cmd
 
-class Options(BaseModel):
+class Options(Cmd):
     input_file: str
     max_records: int = Field(100, cli=('-m', '--max-records'))
     dry_run: bool = Field(default=False, description="Enable dry run mode", cli=('-d', '--dry-run'))
     filtering: Optional[bool]
-
-
-def example_runner(opts: Options) -> int:
-    print(f"Mock example running with {opts}")
-    return 0
-
+    
+    def run(self) -> None:
+        print(f"Mock example running with {self}")
+    
 
 if __name__ == "__main__":
-    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")
+    run_and_exit(Options, description=__doc__, version="0.1.0")
 ```
 
 In this case, 
@@ -355,17 +337,17 @@ For example:
 ```python
 import sys
 
-from pydantic import BaseModel, Field
-from pydantic_cli import run_and_exit
+from pydantic import Field
+from pydantic_cli import run_and_exit, Cmd
 
 
-class MinOptions(BaseModel):
+class MinOptions(Cmd):
     input_file: str = Field(..., cli=('-i',))
     max_records: int = Field(10, cli=('-m', '--max-records'))
 
-
-def example_runner(opts: MinOptions) -> int:
-    return 0
+    def run(self) -> None:
+        # example/mock error raised. Will be mapped to exit code 3 
+        raise ValueError(f"No records found in input file {self.input_file}")
 
 
 def custom_exception_handler(ex: Exception) -> int:
@@ -376,7 +358,7 @@ def custom_exception_handler(ex: Exception) -> int:
 
 
 if __name__ == '__main__':
-    run_and_exit(MinOptions, example_runner, exception_handler=custom_exception_handler)
+    run_and_exit(MinOptions, exception_handler=custom_exception_handler)
 ```
 
 A general pre-execution hook can be called using the `prologue_handler`. This function is `Callable[[T], None]`, where `T` is an instance of your Pydantic data model.
@@ -392,7 +374,7 @@ def custom_prologue_handler(opts) -> None:
     logging.basicConfig(level="DEBUG", stream=sys.stdout)
 
 if __name__ == '__main__':
-    run_and_exit(MinOptions, example_runner, prolgue_handler=custom_prologue_handler)
+    run_and_exit(MinOptions, prolgue_handler=custom_prologue_handler)
 ```
 
 
@@ -410,54 +392,40 @@ def custom_epilogue_handler(exit_code: int, run_time_sec:float) -> None:
 
 
 if __name__ == '__main__':
-    run_and_exit(MinOptions, example_runner, epilogue_handler=custom_epilogue_handler)
+    run_and_exit(MinOptions, epilogue_handler=custom_epilogue_handler)
 
 ```
 
 ## SubParsers
 
-Defining a subparser to your commandline tool is enabled by creating a container `SubParser` dict and calling `run_sp_and_exit`
+Defining a subcommand to your commandline tool is enabled by creating a container of `dict[str, Cmd]` (with `str` is the subcommand name) into `run_and_exit` (or `to_runner`). 
 
 
 ```python
-import typing as T
-from pydantic import BaseModel, AnyUrl, Field
+"""Example Subcommand Tool"""
+from pydantic import AnyUrl, Field
+from pydantic_cli import run_and_exit, Cmd
 
 
-from pydantic_cli import run_sp_and_exit, SubParser
-
-
-class AlphaOptions(BaseModel):
+class AlphaOptions(Cmd):
     input_file: str = Field(..., cli=('-i',))
     max_records: int = Field(10, cli=('-m', '--max-records'))
+    
+    def run(self) -> None:
+        print(f"Running alpha with {self}")
 
 
-class BetaOptions(BaseModel):
+class BetaOptions(Cmd):
+    """Beta command for testing. Description of tool"""
     url: AnyUrl = Field(..., cli=('-u', '--url'))
     num_retries: int = Field(3, cli=('-n', '--num-retries'))
-
-
-def printer_runner(opts: T.Any):
-    print(f"Mock example running with {opts}")
-    return 0
-
-
-def to_runner(sx):
-    def example_runner(opts) -> int:
-        print(f"Mock {sx} example running with {opts}")
-        return 0
-    return example_runner
-
-
-def to_subparser_example():
-
-    return {
-        'alpha': SubParser(AlphaOptions, to_runner("Alpha"), "Alpha SP Description"),
-        'beta': SubParser(BetaOptions, to_runner("Beta"), "Beta SP Description")}
+    
+    def run(self) -> None:
+        print(f"Running beta with {self}")
 
 
 if __name__ == "__main__":
-    run_sp_and_exit(to_subparser_example(), description=__doc__, version='0.1.0')
+    run_and_exit({"alpha": AlphaOptions, "beta": BetaOptions}, description=__doc__, version='0.1.0')
 
 ```
 # Configuration Details and Advanced Features
@@ -526,7 +494,7 @@ Note, that due to the (typically) global zsh completions directory, this can cre
 # General Suggested Testing Model
 
 At a high level, `pydantic_cli` is (hopefully) a thin bridge between your `Options` defined as a Pydantic model and your 
-main `runner(opts: Options)` func that has hooks into the startup, shutdown and error handling of the command line tool. 
+main `Cmd.run() -> None` method that has hooks into the startup, shutdown and error handling of the command line tool. 
 It also supports loading config files defined as JSON. By design, `pydantic_cli` explicitly **does not expose, or leak the argparse instance** or implementation details. 
 Argparse is a bit thorny and was written in a different era of Python. Exposing these implementation details would add too much surface area and would enable users' to start mucking with the argparse instance in all kinds of unexpected ways. 
 
@@ -536,23 +504,21 @@ Testing can be done by leveraging the `to_runner` interface.
 1. It's recommend trying to do the majority of testing via unit tests (independent of `pydantic_cli`) with your main function and different instances of your pydantic data model.
 2. Once this test coverage is reasonable, it can be useful to add a few smoke tests at the integration level leveraging `to_runner` to make sure the tool is functional. Any bugs at this level are probably at the `pydantic_cli` level, not your library code.
 
-Note, that `to_runner(Opts, my_main)` returns a `Callable[[List[str]], int]` that can be used with `argv` to return an integer exit code of your program. The `to_runner` layer will also catch any exceptions. 
+Note, that `to_runner(Opts)` returns a `Callable[[List[str]], int]` that can be used with `sys.argv[1:]` to return an integer exit code of your program. The `to_runner` layer will also catch any exceptions. 
 
 ```python
 import unittest
 
-from pydantic import BaseModel
-from pydantic_cli import to_runner
+from pydantic_cli import to_runner, Cmd
 
 
-class Options(BaseModel):
+class Options(Cmd):
     alpha: int
+    
+    def run(self) -> None:
+        if self.alpha < 0:
+            raise Exception(f"Got options {self}. Forced raise for testing.")
 
-
-def main(opts: Options) -> int:
-    if opts.alpha < 0:
-        raise Exception(f"Got options {opts}. Forced raise for testing.")
-    return 0
 
 
 class TestExample(unittest.TestCase):
@@ -560,14 +526,17 @@ class TestExample(unittest.TestCase):
     def test_core(self):
         # Note, this has nothing to do with pydantic_cli
         # If possible, this is where the bulk of the testing should be
-        self.assertEqual(0, main(Options(alpha=1)))
+        # You code should raise exceptions here or return None on success
+        self.assertTrue(Options(alpha=1).run() is None)
 
     def test_example(self):
-        f = to_runner(Options, main)
-        self.assertEqual(0, f(["--alpha", "100"]))
+        # This is intended to mimic end-to-end testing 
+        # from argv[1:]. The exception handler will map exceptions to int exit codes.   
+        f = to_runner(Options)
+        self.assertEqual(1, f(["--alpha", "100"]))
 
     def test_expected_error(self):
-        f = to_runner(Options, main)
+        f = to_runner(Options)
         self.assertEqual(1, f(["--alpha", "-10"]))
 ```
 
@@ -576,14 +545,15 @@ class TestExample(unittest.TestCase):
 For more scrappy, interactive local development, it can be useful to add `ipdb` or `pdb` and create a custom `exception_handler`.
 
 ```python
-import sys
-from pydantic import BaseModel
-from pydantic_cli import default_exception_handler, run_and_exit
+from pydantic_cli import default_exception_handler, run_and_exit, Cmd
 
 
-class Options(BaseModel):
+class Options(Cmd):
     alpha: int
-
+    
+    def run(self) -> None:
+        if self.alpha < 0:
+            raise Exception(f"Got options {self}. Forced raise for testing.")
 
 def exception_handler(ex: BaseException) -> int:
     exit_code = default_exception_handler(ex)
@@ -591,43 +561,10 @@ def exception_handler(ex: BaseException) -> int:
     return exit_code
 
 
-def main(opts: Options) -> int:
-    if opts.alpha < 0:
-        raise Exception(f"Got options {opts}. Forced raise for testing.")
-    return 0
-
-
 if __name__ == "__main__":
-    run_and_exit(Options, main, exception_handler=exception_handler)
+    run_and_exit(Options, exception_handler=exception_handler)
 ```
 
-Alternatively, wrap your main function to call `ipdb`.
-
-```python
-import sys
-
-from pydantic import BaseModel
-from pydantic_cli import run_and_exit
-
-
-class Options(BaseModel):
-    alpha: int
-
-
-def main(opts: Options) -> int:
-    if opts.alpha < 0:
-        raise Exception(f"Got options {opts}. Forced raise for testing.")
-    return 0
-
-
-def main_with_ipd(opts: Options) -> int:
-    import ipdb; ipdb.set_trace()
-    return main(opts)
-
-
-if __name__ == "__main__":
-    run_and_exit(Options, main_with_ipd)
-```
 
 The core design choice in `pydantic_cli` is leveraging composable functions `f(g(x))` style providing a straight-forward mechanism to plug into.
 
@@ -657,15 +594,18 @@ Positional arguments create friction points when combined with loading model val
 For example:
 
 ```python
-from pydantic import BaseModel
-from pydantic_cli import CliConfig
+from pydantic_cli import CliConfig, Cmd
 
-class MinOptions(BaseModel):
+
+class MinOptions(Cmd):
     model_config = CliConfig(cli_json_enable=True)
     
     input_file: str
     input_hdf: str
     max_records: int = 100
+
+    def run(self) -> None:
+        print(f"Running with mock {self}")
 ```
 
 And the vanilla case running from the command line works as expected.
@@ -699,15 +639,18 @@ In my experience, **the changing of the semantic meaning of the command line too
 The simplest fix is to remove the positional arguments in favor of `-i` or similar which removed the issue.
 
 ```python
-from pydantic import BaseModel, Field
-from pydantic_cli import run_and_exit, to_runner, CliConfig
+from pydantic import Field
+from pydantic_cli import CliConfig, Cmd
 
-class MinOptions(BaseModel):
+class MinOptions(Cmd):
     model_config = CliConfig(cli_json_enable=True)
     
     input_file: str = Field(..., cli=('-i', ))
     input_hdf: str = Field(..., cli=('-d', '--hdf'))
     max_records: int = Field(100, cli=('-m', '--max-records'))
+
+    def run(self) -> None:
+        print(f"Running {self}")
 ```
 
 Running with the `preset.json` defined above, works as expected.

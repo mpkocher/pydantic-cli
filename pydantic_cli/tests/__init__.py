@@ -6,6 +6,7 @@ from typing import Callable as F
 from pydantic import BaseModel
 
 from pydantic_cli import (
+    Cmd,
     to_runner,
     default_prologue_handler,
     default_epilogue_handler,
@@ -13,7 +14,7 @@ from pydantic_cli import (
     EpilogueHandlerType,
 )
 
-M = TypeVar("M", bound=BaseModel)
+M = TypeVar("M", bound=Cmd)
 
 
 # Making this name a bit odd (from TestConfig)
@@ -22,13 +23,11 @@ M = TypeVar("M", bound=BaseModel)
 class HarnessConfig(Generic[M]):
     def __init__(
         self,
-        model_class: Type[M],
-        runner_func: F[[M], int],
+        cmd: Type[M],
         prologue: PrologueHandlerType = default_prologue_handler,
         epilogue: EpilogueHandlerType = default_epilogue_handler,
     ):
-        self.model = model_class
-        self.runner = runner_func
+        self.cmd = cmd
         self.prologue = prologue
         self.epilogue = epilogue
 
@@ -36,12 +35,17 @@ class HarnessConfig(Generic[M]):
 class _TestHarness(Generic[M], unittest.TestCase):
     CONFIG: HarnessConfig[M]
 
-    def run_config(self, args, exit_code=0):
+    def _to_exit(self, xs: None | int) -> int:
+        # this is to handle the old model.
+        # to_runner should now raise exceptions if there's
+        # an issue
+        return 0 if xs is None else xs
+
+    def run_config(self, args: list[str], exit_code: int = 0):
         f = to_runner(
-            self.CONFIG.model,
-            self.CONFIG.runner,
+            self.CONFIG.cmd,
             prologue_handler=self.CONFIG.prologue,
             epilogue_handler=self.CONFIG.epilogue,
         )
-        _exit_code = f(args)
+        _exit_code = self._to_exit(f(args))
         self.assertEqual(_exit_code, exit_code)

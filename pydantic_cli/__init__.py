@@ -1,13 +1,16 @@
+import abc
 import collections
 import datetime
 import sys
 import traceback
 import logging
 import typing
-import typing as T
-from typing import Callable as F
+from typing import overload
+from typing import Any, Mapping, Callable
+
 
 import pydantic
+from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefined
 
@@ -32,14 +35,11 @@ from .shell_completion import (
 
 log = logging.getLogger(__name__)
 
-NOT_PROVIDED = ...
-NONE_TYPE = type(None)
 
 __all__ = [
+    "Cmd",
     "to_runner",
     "run_and_exit",
-    "to_runner_sp",
-    "run_sp_and_exit",
     "default_exception_handler",
     "default_minimal_exception_handler",
     "default_prologue_handler",
@@ -52,25 +52,19 @@ __all__ = [
 ]
 
 
-class SubParser(T.Generic[M]):
-    def __init__(
-        self,
-        model_class: T.Type[M],
-        runner_func: F[[M], int],
-        description: T.Optional[str],
-    ):
-        self.model_class = model_class
-        self.runner_func = runner_func
-        self.description = description
-
-    def __repr__(self):
-        # not every func instance has __name__, e.g., functools.partial
-        name = getattr(self.runner_func, "__name__", str(self.runner_func))
-        d = dict(k=str(self.model_class), f=name)
-        return "<{k} func:{f} >".format(**d)
+class Cmd(BaseModel):
+    @abc.abstractmethod
+    def run(self) -> None: ...
 
 
-def _is_sequence(annotation: T.Any) -> bool:
+CmdKlassT = type[Cmd]
+SubCmdKlassT = Mapping[str, CmdKlassT]
+CmdOrSubCmdKlassT = CmdKlassT | SubCmdKlassT
+NOT_PROVIDED = ...
+NONE_TYPE = type(None)
+
+
+def _is_sequence(annotation: Any) -> bool:
     #  FIXME There's probably a better and robust way to do this.
     # Lifted from pydantic
     LIST_TYPES: list[type] = [list, typing.List, collections.abc.MutableSequence]
@@ -82,7 +76,7 @@ def _is_sequence(annotation: T.Any) -> bool:
     return getattr(annotation, "__origin__", "NOTFOUND") in ALL_SEQ
 
 
-def __try_to_pretty_type(field_type) -> str:
+def __try_to_pretty_type(field_type: Any) -> str:
     """
     This is a marginal improvement to get the types to be
     displayed in slightly better format.
@@ -106,16 +100,15 @@ def __try_to_pretty_type(field_type) -> str:
 
 
 def __to_type_description(
-    default_value=NOT_PROVIDED,
-    field_type=NOT_PROVIDED,
+    default_value: Any = NOT_PROVIDED,
+    field_type: Any = NOT_PROVIDED,
     allow_none: bool = False,
     is_required: bool = False,
-):
+) -> str:
     t = "" if field_type is NOT_PROVIDED else __try_to_pretty_type(field_type)
-    # FIXME Pydantic has a very odd default of None, which makes often can make the
-    # the "default" is actually None, or is not None
+
     # avoid using in with a Set to avoid assumptions that default_value is hashable
-    allowed_defaults: T.List[T.Any] = (
+    allowed_defaults: list[Any] = (
         [NOT_PROVIDED, PydanticUndefined]
         if allow_none
         else [NOT_PROVIDED, PydanticUndefined, None, type(None)]
@@ -137,7 +130,7 @@ def __process_tuple(tuple_one_or_two: Tuple1or2Type, long_arg: str) -> Tuple1or2
     If the custom args are provided as only short, then
     add the long version. Or just use the
     """
-    lx: T.List[str] = list(tuple_one_or_two)
+    lx: list[str] = list(tuple_one_or_two)
 
     nx = len(lx)
     if nx == 1:
@@ -159,7 +152,7 @@ def _add_pydantic_field_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
     field_info: FieldInfo,
-    override_value: T.Any = ...,
+    override_value: Any = ...,
     long_prefix: str = "--",
 ) -> CustomArgumentParser:
     """
@@ -230,10 +223,10 @@ def _add_pydantic_field_to_parser(
 
 
 def _add_pydantic_class_to_parser(
-    p: CustomArgumentParser, cls: T.Type[M], default_overrides: T.Dict[str, T.Any]
+    p: CustomArgumentParser, cmd: CmdKlassT, default_overrides: dict[str, Any]
 ) -> CustomArgumentParser:
 
-    for ix, field in cls.model_fields.items():
+    for ix, field in cmd.model_fields.items():
         override_value = default_overrides.get(ix, ...)
         _add_pydantic_field_to_parser(p, ix, field, override_value=override_value)
 
@@ -241,10 +234,10 @@ def _add_pydantic_class_to_parser(
 
 
 def pydantic_class_to_parser(
-    cls: T.Type[M],
-    description: T.Optional[str] = None,
-    version: T.Optional[str] = None,
-    default_value_override=...,
+    cls: CmdKlassT,
+    description: str | None = None,
+    version: str | None = None,
+    default_value_override: Any = NOT_PROVIDED,
 ) -> CustomArgumentParser:
     """
     Convert a pydantic data model class to an argparse instance
@@ -310,7 +303,7 @@ def default_epilogue_handler(exit_code: int, run_time_sec: float) -> None:
     pass
 
 
-def default_prologue_handler(opts: T.Any) -> None:
+def default_prologue_handler(opts: Any) -> None:
     """
     General Hook to call before executing your runner func (e.g., f(opt)).
 
@@ -325,9 +318,9 @@ def default_prologue_handler(opts: T.Any) -> None:
 
 
 def _runner(
-    args: T.List[str],
-    setup_hook: F[[T.List[str]], T.Dict[str, T.Any]],
-    to_parser_with_overrides: F[[T.Dict[str, T.Any]], CustomArgumentParser],
+    args: list[str],
+    setup_hook: Callable[[list[str]], dict[str, Any]],
+    to_parser_with_overrides: Callable[[dict[str, Any]], CustomArgumentParser],
     exception_handler: ExceptionHandlerType,
     prologue_handler: PrologueHandlerType,
     epilogue_handler: EpilogueHandlerType,
@@ -337,7 +330,7 @@ def _runner(
     supplied commandline args.
     """
 
-    def now():
+    def now() -> datetime.datetime:
         return datetime.datetime.now()
 
     # These initial steps are difficult to debug at times
@@ -347,7 +340,7 @@ def _runner(
     started_at = now()
     try:
         # this SHOULD NOT have an "Eager" command defined
-        custom_default_values: dict = setup_hook(args)
+        custom_default_values: dict[str, Any] = setup_hook(args)
 
         # this must already have a closure over the model(s)
         parser: CustomArgumentParser = to_parser_with_overrides(custom_default_values)
@@ -357,30 +350,32 @@ def _runner(
 
         # this is really only motivated by the subparser case
         # for the simple parser, the Pydantic class could just be passed in
-        cls = pargs.cls
+        cmd_cls: type[Cmd] = pargs.cmd
         # There's some slop in here using set_default(func=) hack/trick
-        # hence we have to explicitly define the expected type
-        runner_func: F[[T.Any], int] = pargs.func
 
         # log.debug(pargs.__dict__)
         d = pargs.__dict__
 
         # This is a bit sloppy. There's some fields that are added
         # to the argparse namespace to get around some of argparse's thorny design
-        pure_keys = cls.model_json_schema()["properties"].keys()
+        pure_keys = cmd_cls.model_json_schema()["properties"].keys()
 
         # Remove the items that may have
         # polluted the namespace (e.g., func, cls, json_config)
         # to avoid leaking into the Pydantic data model.
         pure_d = {k: v for k, v in d.items() if k in pure_keys}
 
-        opts = cls(**pure_d)
+        cmd = cmd_cls(**pure_d)
 
         # this validation interface is a bit odd
         # and the errors aren't particularly pretty in the console
-        cls.model_validate(opts)
-        prologue_handler(opts)
-        exit_code = runner_func(opts)
+        cmd_cls.model_validate(cmd)
+        prologue_handler(cmd)
+        # This should raise if there's an issue
+        out = cmd.run()
+        if out is not None:
+            log.warning("Cmd.run() should return None or raise an exception.")
+        exit_code = 0
     except TerminalEagerCommand:
         exit_code = 0
     except Exception as e:
@@ -392,7 +387,7 @@ def _runner(
     return exit_code
 
 
-def null_setup_hook(args: T.List[str]) -> T.Dict[str, T.Any]:
+def null_setup_hook(args: list[str]) -> dict[str, Any]:
     return {}
 
 
@@ -429,9 +424,7 @@ def create_parser_with_config_json_file_arg(
     return p
 
 
-def setup_hook_to_load_json(
-    args: T.List[str], cli_config: CliConfig
-) -> T.Dict[str, T.Any]:
+def setup_hook_to_load_json(args: list[str], cli_config: CliConfig) -> dict[str, Any]:
 
     # This can't have HelpAction or any other "Eager" action defined
     parser = create_parser_with_config_json_file_arg(cli_config)
@@ -441,7 +434,7 @@ def setup_hook_to_load_json(
 
     d = {}
 
-    #  Arg parse will do some munging on this due to it's Namespace attribute style.
+    #  Arg parse will do some munging on this due to its Namespace attribute style.
     json_config_path = getattr(
         pjargs, cli_config["cli_json_key"].replace("-", "_"), None
     )
@@ -452,35 +445,34 @@ def setup_hook_to_load_json(
     return d
 
 
-def _runner_with_args(
-    args: T.List[str],
-    cls: T.Type[M],
-    runner_func: F[[M], int],
-    description: T.Optional[str] = None,
-    version: T.Optional[str] = None,
+def _to_runner_with_args(
+    cmd: CmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
     exception_handler: ExceptionHandlerType = default_exception_handler,
     prologue_handler: PrologueHandlerType = default_prologue_handler,
     epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
-) -> int:
-    def to_p(default_override_dict: T.Dict[str, T.Any]) -> CustomArgumentParser:
+) -> Callable[[list[str]], int]:
+    def to_p(default_override_dict: dict[str, Any]) -> CustomArgumentParser:
         # Raw errors at the argparse level aren't always
         # communicated in an obvious way at this level
         parser = pydantic_class_to_parser(
-            cls,
+            cmd,
             description=description,
             version=version,
             default_value_override=default_override_dict,
         )
 
-        # this is a bit of hackery
-        parser.set_defaults(func=runner_func, cls=cls)
+        # call opts.run() downstream
+        parser.set_defaults(cmd=cmd)
         return parser
 
-    cli_config = _get_cli_config_from_model(cls)
+    cli_config = _get_cli_config_from_model(cmd)
 
     if cli_config["cli_json_enable"]:
 
-        def __setup(args: list[str]) -> T.Dict[str, T.Any]:
+        def __setup(args: list[str]) -> dict[str, Any]:
             c = cli_config.copy()
             c["cli_json_validate_path"] = False
             return setup_hook_to_load_json(args, c)
@@ -488,78 +480,20 @@ def _runner_with_args(
     else:
         __setup = null_setup_hook
 
-    return _runner(
-        args, __setup, to_p, exception_handler, prologue_handler, epilogue_handler
-    )
-
-
-class to_runner(T.Generic[M]):
-    """
-    This is written as a class instead of simple function to get the Parametric Polymorphism to work correctly.
-    """
-
-    def __init__(
-        self,
-        cls: T.Type[M],
-        runner_func: F[[M], int],
-        description: T.Optional[str] = None,
-        version: T.Optional[str] = None,
-        exception_handler: ExceptionHandlerType = default_exception_handler,
-        prologue_handler: PrologueHandlerType = default_prologue_handler,
-        epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
-    ):
-        self.cls = cls
-        self.runner_func = runner_func
-        self.description = description
-        self.version = version
-        self.exception_handler = exception_handler
-        self.prologue_handler = prologue_handler
-        self.epilogue_handler = epilogue_handler
-
-    def __call__(self, args: T.List[str]) -> int:
-        return _runner_with_args(
-            args,
-            self.cls,
-            self.runner_func,
-            description=self.description,
-            version=self.version,
-            exception_handler=self.exception_handler,
-            prologue_handler=self.prologue_handler,
-            epilogue_handler=self.epilogue_handler,
+    def f(args: list[str]) -> int:
+        return _runner(
+            args, __setup, to_p, exception_handler, prologue_handler, epilogue_handler
         )
 
-
-def run_and_exit(
-    cls: T.Type[M],
-    runner_func: F[[M], int],
-    description: T.Optional[str] = None,
-    version: T.Optional[str] = None,
-    exception_handler: ExceptionHandlerType = default_exception_handler,
-    prologue_handler: PrologueHandlerType = default_prologue_handler,
-    epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
-    args: T.Optional[T.List[str]] = None,
-) -> T.NoReturn:
-
-    _args: T.List[str] = sys.argv[1:] if args is None else args
-
-    sys.exit(
-        to_runner[M](
-            cls,
-            runner_func,
-            description=description,
-            version=version,
-            exception_handler=exception_handler,
-            prologue_handler=prologue_handler,
-            epilogue_handler=epilogue_handler,
-        )(_args)
-    )
+    return f
 
 
-def to_subparser(
-    models: T.Dict[str, SubParser],
-    description: T.Optional[str] = None,
-    version: T.Optional[str] = None,
-    overrides: T.Optional[T.Dict[str, T.Any]] = None,
+def _to_subparser(
+    cmds: SubCmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
+    overrides: dict[str, Any] | None = None,
 ) -> CustomArgumentParser:
 
     p = CustomArgumentParser(
@@ -576,25 +510,23 @@ def to_subparser(
     sp.required = True
     overrides_defaults = {} if overrides is None else overrides
 
-    for subparser_id, sbm in models.items():
-        log.debug(f"Adding subparser id={subparser_id} with {sbm}")
+    for subparser_id, cmd in cmds.items():
+        log.debug(f"Adding subparser id={subparser_id} with {cmd}")
 
         spx: CustomArgumentParser = sp.add_parser(
-            subparser_id, help=sbm.description, add_help=False
+            subparser_id, help=cmd.__doc__, add_help=False
         )
 
-        _add_pydantic_class_to_parser(
-            spx, sbm.model_class, default_overrides=overrides_defaults
-        )
+        _add_pydantic_class_to_parser(spx, cmd, default_overrides=overrides_defaults)
 
-        cli_config = _get_cli_config_from_model(sbm.model_class)
+        cli_config = _get_cli_config_from_model(cmd)
 
         if cli_config["cli_json_enable"]:
             _parser_add_arg_json_file(spx, cli_config)
 
         _parser_add_help(spx)
 
-        spx.set_defaults(func=sbm.runner_func, cls=sbm.model_class)
+        spx.set_defaults(cmd=cmd)
 
     if version is not None:
         _parser_add_version(p, version)
@@ -602,26 +534,27 @@ def to_subparser(
     return p
 
 
-def to_runner_sp(
-    subparsers: T.Dict[str, SubParser],
-    description: T.Optional[str] = None,
-    version: T.Optional[str] = None,
+def _to_runner_sp_with_args(
+    cmds: SubCmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
     exception_handler: ExceptionHandlerType = default_exception_handler,
     prologue_handler: PrologueHandlerType = default_prologue_handler,
     epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
-) -> F[[T.List[str]], int]:
+) -> Callable[[list[str]], int]:
 
     # This is a bit messy. The design calling _runner requires a single setup hook.
     # in principle, there can be different json key names for each subparser
     # there's not really a clean way to support different key names (which
     # you probably don't want for consistency’s sake.
 
-    for sbm in subparsers.values():
-        cli_config = _get_cli_config_from_model(sbm.model_class)
+    for cmd in cmds.values():
+        cli_config = _get_cli_config_from_model(cmd)
 
         if cli_config["cli_json_enable"]:
 
-            def _setup_hook(args: T.List[str]) -> T.Dict[str, T.Any]:
+            def _setup_hook(args: list[str]) -> dict[str, Any]:
                 # We allow the setup to fail if the JSON config isn't found
                 c = cli_config.copy()
                 c["cli_json_validate_path"] = False
@@ -630,12 +563,12 @@ def to_runner_sp(
         else:
             _setup_hook = null_setup_hook
 
-    def _to_parser(overrides: T.Dict[str, T.Any]) -> CustomArgumentParser:
-        return to_subparser(
-            subparsers, description=description, version=version, overrides=overrides
+    def _to_parser(overrides: dict[str, Any]) -> CustomArgumentParser:
+        return _to_subparser(
+            cmds, description=description, version=version, overrides=overrides
         )
 
-    def f(args: T.List[str]) -> int:
+    def f(args: list[str]) -> int:
         return _runner(
             args,
             _setup_hook,
@@ -648,18 +581,107 @@ def to_runner_sp(
     return f
 
 
-def run_sp_and_exit(
-    subparsers: T.Dict[str, SubParser[M]],
-    description: T.Optional[str] = None,
-    version: T.Optional[str] = None,
+@overload
+def to_runner(
+    xs: CmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
     exception_handler: ExceptionHandlerType = default_exception_handler,
     prologue_handler: PrologueHandlerType = default_prologue_handler,
     epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
-    args: T.Optional[T.List[str]] = None,
-) -> T.NoReturn:
+) -> Callable[[list[str]], int]: ...
 
-    f = to_runner_sp(
-        subparsers,
+
+@overload
+def to_runner(
+    xs: SubCmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
+    exception_handler: ExceptionHandlerType = default_exception_handler,
+    prologue_handler: PrologueHandlerType = default_prologue_handler,
+    epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
+) -> Callable[[list[str]], int]: ...
+
+
+def to_runner(
+    xs: CmdOrSubCmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
+    exception_handler: ExceptionHandlerType = default_exception_handler,
+    prologue_handler: PrologueHandlerType = default_prologue_handler,
+    epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
+) -> Callable[[list[str]], int]:
+    """
+    Core method to return a func(list[str]) -> int
+    """
+
+    # FIXME. This runtime type checking should be more strict
+    # explicitly writing these out in each if block to avoid
+    # friction points with mypy.
+    if isinstance(xs, type(Cmd)):
+        return _to_runner_with_args(
+            xs,
+            description=description,
+            version=version,
+            exception_handler=exception_handler,
+            prologue_handler=prologue_handler,
+            epilogue_handler=epilogue_handler,
+        )
+    elif isinstance(xs, dict):
+        return _to_runner_sp_with_args(
+            xs,
+            description=description,
+            version=version,
+            exception_handler=exception_handler,
+            prologue_handler=prologue_handler,
+            epilogue_handler=epilogue_handler,
+        )
+    else:
+        raise ValueError(f"Invalid cmd {xs}")
+
+
+@overload
+def run_and_exit(
+    xs: CmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
+    exception_handler: ExceptionHandlerType = default_exception_handler,
+    prologue_handler: PrologueHandlerType = default_prologue_handler,
+    epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
+    args: list[str] | None = None,
+) -> typing.NoReturn: ...
+
+
+@overload
+def run_and_exit(
+    xs: SubCmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
+    exception_handler: ExceptionHandlerType = default_exception_handler,
+    prologue_handler: PrologueHandlerType = default_prologue_handler,
+    epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
+    args: list[str] | None = None,
+) -> typing.NoReturn: ...
+
+
+def run_and_exit(
+    xs: CmdOrSubCmdKlassT,
+    *,
+    description: str | None = None,
+    version: str | None = None,
+    exception_handler: ExceptionHandlerType = default_exception_handler,
+    prologue_handler: PrologueHandlerType = default_prologue_handler,
+    epilogue_handler: EpilogueHandlerType = default_epilogue_handler,
+    args: list[str] | None = None,
+) -> typing.NoReturn:
+
+    f = to_runner(
+        xs,
         description=description,
         version=version,
         exception_handler=exception_handler,
@@ -667,5 +689,5 @@ def run_sp_and_exit(
         epilogue_handler=epilogue_handler,
     )
 
-    _args: T.List[str] = sys.argv[1:] if args is None else args
+    _args: list[str] = sys.argv[1:] if args is None else args
     sys.exit(f(_args))

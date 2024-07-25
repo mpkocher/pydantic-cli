@@ -11,14 +11,14 @@ def _load_json_file(json_path: str) -> T.Dict[str, T.Any]:
     return d
 
 
-def _resolve_path_or_none(path: str) -> T.Optional[str]:
+def _resolve_path_or_none(path: str) -> str | None:
     p = os.path.abspath(path)
     if os.path.exists(p):
         return p
     return None
 
 
-def _resolve_file_or_none_and_warn(path: str) -> T.Optional[str]:
+def _resolve_file_or_none_and_warn(path: str) -> str | None:
     p = _resolve_path_or_none(path)
     if p is None:
         warnings.warn(f"Unable to find {path}")
