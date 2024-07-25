@@ -1,6 +1,15 @@
 # CHANGELOG
 
+## Version 6.0.0
+
+- Backwards incompatible change. Use `Cmd` model.
+- Remove "*sp*" specific functions. No longer necessary because of Cmd interface.
+- To migrate forward, inherit from `Cmd` and put your "main" function as `Cmd.run` method.
+- `Cmd.run()` should return None (on success) or raise an exception on error.
+
 ## Version 5.0.0 (Pydantic 2 support)
+
+(Not published)
 
 - Support for Pydantic >= 2.8
 - Pydantic 2 has a different "optional" definition
