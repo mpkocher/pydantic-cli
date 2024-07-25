@@ -1,6 +1,6 @@
 import sys
 import logging
-from typing import Union, override
+from typing import Union
 
 from pydantic import Field
 
@@ -18,7 +18,6 @@ class Options(Cmd):
     min_filter_score: float = Field(..., cli=("-f", "--filter-score"))
     alpha: Union[int, str] = 1
 
-    @override
     def run(self) -> None:
         log.info(
             f"pydantic_cli version={__version__} Mock example running with options {self}"
