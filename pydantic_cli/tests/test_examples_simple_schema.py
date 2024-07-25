@@ -1,10 +1,10 @@
-from pydantic_cli.examples.simple_schema import Options, example_runner
+from pydantic_cli.examples.simple_schema import Options
 
 from . import _TestHarness, HarnessConfig
 
 
 class TestExamples(_TestHarness):
-    CONFIG = HarnessConfig(Options, example_runner)
+    CONFIG = HarnessConfig(Options)
 
     def test_01(self):
         args = "-f /path/to/file.txt --max_records 1234 -s 1.234 --max-filter-score 10.234 -n none"

@@ -1,6 +1,5 @@
 from pydantic_cli.examples.simple_with_custom_and_setup_log import (
     Options,
-    example_runner,
     epilogue_handler,
     prologue_handler,
 )
@@ -10,7 +9,6 @@ from . import _TestHarness, HarnessConfig
 class TestExamples(_TestHarness[Options]):
     CONFIG = HarnessConfig(
         Options,
-        example_runner,
         epilogue=epilogue_handler,
         prologue=prologue_handler,
     )

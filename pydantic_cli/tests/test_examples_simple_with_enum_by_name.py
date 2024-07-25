@@ -1,11 +1,11 @@
 from . import _TestHarness, HarnessConfig
 
-from pydantic_cli.examples.simple_with_enum_by_name import Options, example_runner
+from pydantic_cli.examples.simple_with_enum_by_name import Options
 
 
 class TestExamples(_TestHarness[Options]):
 
-    CONFIG = HarnessConfig(Options, example_runner)
+    CONFIG = HarnessConfig(Options)
 
     def test_simple_01(self):
         args = ["--states", "RUNNING", "FAILED", "--mode", "alpha"]
