@@ -9,7 +9,6 @@ my-tool --input_file file.fasta --max_records 10
 ```
 """
 
-from typing import override
 from pydantic_cli import run_and_exit, Cmd
 
 
@@ -17,7 +16,6 @@ class Options(Cmd):
     input_file: str
     max_records: int
 
-    @override
     def run(self) -> None:
         print(f"Mock example running with {self}")
 
