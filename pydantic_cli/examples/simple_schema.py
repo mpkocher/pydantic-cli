@@ -7,12 +7,12 @@ Note, that this leverages Pydantic's underlying validation mechanism. For exampl
 """
 
 from typing import Optional
-from pydantic import BaseModel, Field
+from pydantic import Field
 
-from pydantic_cli import run_and_exit, HAS_AUTOCOMPLETE_SUPPORT, CliConfig
+from pydantic_cli import run_and_exit, HAS_AUTOCOMPLETE_SUPPORT, CliConfig, Cmd
 
 
-class Options(BaseModel):
+class Options(Cmd):
     model_config = CliConfig(
         frozen=True, cli_shell_completion_enable=HAS_AUTOCOMPLETE_SUPPORT
     )
@@ -55,13 +55,11 @@ class Options(BaseModel):
         cli=("-n", "--filter-name"),
     )
 
-
-def example_runner(opts: Options) -> int:
-    print(f"Mock example running with options {opts}")
-    for x in (opts.input_file, opts.max_records, opts.min_filter_score, opts.name):
-        print(f"{x} type={type(x)}")
-    return 0
+    def run(self) -> None:
+        print(f"Mock example running with options {self}")
+        for x in (self.input_file, self.max_records, self.min_filter_score, self.name):
+            print(f"{x} type={type(x)}")
 
 
 if __name__ == "__main__":
-    run_and_exit(Options, example_runner, description=__doc__, version="0.1.0")
+    run_and_exit(Options, description=__doc__, version="0.1.0")

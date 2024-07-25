@@ -19,13 +19,13 @@ Similarly, `CLI_JSON_ENABLE`
 
 import logging
 from pydantic import BaseModel
-from pydantic_cli import run_and_exit, CliConfig
+from pydantic_cli import run_and_exit, CliConfig, Cmd
 from pydantic_cli.examples import epilogue_handler, prologue_handler
 
 log = logging.getLogger(__name__)
 
 
-class Opts(BaseModel):
+class Opts(Cmd):
     model_config = CliConfig(
         frozen=True, cli_json_key="json-training", cli_json_enable=True
     )
@@ -36,16 +36,13 @@ class Opts(BaseModel):
     alpha: float
     beta: float
 
-
-def runner(opts: Opts) -> int:
-    print(f"Running with opts:{opts}")
-    return 0
+    def run(self) -> None:
+        print(f"Running with opts:{self}")
 
 
 if __name__ == "__main__":
     run_and_exit(
         Opts,
-        runner,
         description="My Tool Description",
         version="0.1.0",
         prologue_handler=prologue_handler,

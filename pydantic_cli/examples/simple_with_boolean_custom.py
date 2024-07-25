@@ -1,22 +1,21 @@
 import logging
 from enum import Enum
 from typing import Optional, Union, Set
-from pydantic import BaseModel
 from pydantic.fields import Field
 
-from pydantic_cli import run_and_exit, default_minimal_exception_handler, CliConfig
+from pydantic_cli import run_and_exit, default_minimal_exception_handler, CliConfig, Cmd
 from pydantic_cli.examples import setup_logger
 
 
 class State(str, Enum):
-    """Note, this is case sensitive when providing it from the commandline"""
+    """Note, this is case-sensitive when providing it from the commandline"""
 
     RUNNING = "RUNNING"
     FAILED = "FAILED"
     SUCCESSFUL = "SUCCESSFUL"
 
 
-class Options(BaseModel):
+class Options(Cmd):
     model_config = CliConfig(frozen=True)
 
     # Simple Arg/Option can be added and a reasonable commandline "long" flag will be created.
@@ -77,17 +76,14 @@ class Options(BaseModel):
     # there's an ambiguity. "1" will be cast to an int, which might not be the desired/expected results
     filter_mode: Union[str, int]
 
-
-def example_runner(opts: Options) -> int:
-    print(f"Mock example running with {opts}")
-    return 0
+    def run(self) -> None:
+        print(f"Mock example running with {self}")
 
 
 if __name__ == "__main__":
     logging.basicConfig(level="DEBUG")
     run_and_exit(
         Options,
-        example_runner,
         version="2.0.0",
         description="Example Commandline tool for demonstrating how custom fields/flags are communicated",
         exception_handler=default_minimal_exception_handler,
