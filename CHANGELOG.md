@@ -1,5 +1,10 @@
 # CHANGELOG
 
+## Version 7.0.0
+
+- Drop support for python > 3.10
+- CI fixes for explicitly testing for 3.10, 3.11, 3.12
+
 ## Version 6.0.0
 
 - Backwards incompatible change. Use `Cmd` model.
