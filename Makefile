@@ -4,7 +4,7 @@ test:
 	pytest
 
 package:
-	python setup.py sdist bdist_wheel
+	hatch build
 
 
 deploy:
