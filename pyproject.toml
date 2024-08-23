@@ -38,4 +38,4 @@ packages = ['pydantic_cli', 'pydantic_cli.examples']
 path = "pydantic_cli/_version.py"
 
 [tool.hatch.build]
-include = ['CHANGELOG.md']
+include = ['CHANGELOG.md', 'pydantic_cli']
