@@ -3,7 +3,7 @@
 test:
 	pytest
 
-package:
+pkg:
 	hatch build
 
 

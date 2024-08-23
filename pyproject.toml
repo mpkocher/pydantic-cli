@@ -34,6 +34,9 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ['pydantic_cli', 'pydantic_cli.examples']
 
+[tool.hatch.bulid.targets.wheel.sources]
+src = "pydantic_cli"
+
 [tool.hatch.version]
 path = "pydantic_cli/_version.py"
 
