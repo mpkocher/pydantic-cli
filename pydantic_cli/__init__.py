@@ -7,6 +7,7 @@ import logging
 import typing
 from typing import overload
 from typing import Any, Mapping, Callable
+from enum import Enum
 
 
 import pydantic
@@ -92,10 +93,13 @@ def __try_to_pretty_type(field_type: Any) -> str:
             name = "|".join(map(lambda x: x.__name__, args))
     else:
         try:
-            name = field_type.__name__
+            name = field_type.__name__ + (
+                f"{[option.value for option in field_type]}"
+                if issubclass(field_type, Enum)
+                else ""
+            )
         except AttributeError:
             name = repr(field_type)
-
     return f"type:{name}"
 
 
