@@ -12,7 +12,6 @@ from typing import Any, Mapping, Callable
 import pydantic
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
-from pydantic_core import PydanticUndefined
 
 from ._version import __version__
 
@@ -61,7 +60,6 @@ CmdKlassT = type[Cmd]
 SubCmdKlassT = Mapping[str, CmdKlassT]
 CmdOrSubCmdKlassT = CmdKlassT | SubCmdKlassT
 NOT_PROVIDED = ...
-NONE_TYPE = type(None)
 
 
 def _is_sequence(annotation: Any) -> bool:
@@ -74,54 +72,6 @@ def _is_sequence(annotation: Any) -> bool:
 
     # what is exactly going on here?
     return getattr(annotation, "__origin__", "NOTFOUND") in ALL_SEQ
-
-
-def __try_to_pretty_type(field_type: Any) -> str:
-    """
-    This is a marginal improvement to get the types to be
-    displayed in slightly better format.
-
-    FIXME. This needs to be display Union types better.
-    """
-
-    args = typing.get_args(field_type)
-    if args:
-        if len(args) == 1:
-            name = field_type.__name__
-        else:
-            name = "|".join(map(lambda x: x.__name__, args))
-    else:
-        try:
-            name = field_type.__name__
-        except AttributeError:
-            name = repr(field_type)
-
-    return f"type:{name}"
-
-
-def __to_type_description(
-    default_value: Any = NOT_PROVIDED,
-    field_type: Any = NOT_PROVIDED,
-    allow_none: bool = False,
-    is_required: bool = False,
-) -> str:
-    t = "" if field_type is NOT_PROVIDED else __try_to_pretty_type(field_type)
-
-    # avoid using in with a Set to avoid assumptions that default_value is hashable
-    allowed_defaults: list[Any] = (
-        [NOT_PROVIDED, PydanticUndefined]
-        if allow_none
-        else [NOT_PROVIDED, PydanticUndefined, None, type(None)]
-    )
-    v = (
-        ""
-        if any((default_value is x) for x in allowed_defaults)
-        else f"default:{default_value}"
-    )
-    required = " *required*" if is_required else ""
-    sep = " " if v else ""
-    xs = sep.join([t, v]) + required
-    return xs
 
 
 @pydantic.validate_call
@@ -190,7 +140,6 @@ def _add_pydantic_field_to_parser(
     cli_short_long: Tuple1or2Type = __process_tuple(cli_custom_, default_long_arg)
 
     is_required = field_info.is_required()
-    is_nullable = type(None) in typing.get_args(field_info.annotation)
     default_value = field_info.default
     is_sequence = _is_sequence(field_info.annotation)
 
@@ -200,19 +149,14 @@ def _add_pydantic_field_to_parser(
         default_value = override_value
         is_required = False
 
-    type_desc = __to_type_description(
-        default_value, field_info.annotation, is_nullable, is_required
-    )
-
     # log.debug(f"Creating Argument Field={field_id} opts:{cli_short_long}, allow_none={field.allow_none} default={default_value} type={field.type_} required={is_required} dest={field_id} desc={description}")
 
     # MK. I don't think there's any point trying to fight with argparse to get
     # the types correct here. It's just a mess from a type standpoint.
     shape_kw = {"nargs": "+"} if is_sequence else {}
-    desc = description or ""
     parser.add_argument(
         *cli_short_long,
-        help=f"{desc} ({type_desc})",
+        help=repr(field_info),
         default=default_value,
         dest=field_id,
         required=is_required,
