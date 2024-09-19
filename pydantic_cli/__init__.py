@@ -130,13 +130,16 @@ def _add_pydantic_field_to_parser(
     """
 
     default_long_arg = "".join([long_prefix, field_id])
-    description = field_info.description
     # there's mypy type issues here
     cli_custom_: Tuple1or2Type = (
         (default_long_arg,)
         if field_info.json_schema_extra is None  # type: ignore
         else field_info.json_schema_extra.get("cli", (default_long_arg,))  # type: ignore
     )
+    # Delete cli so the metadata isn't in FieldInfo and won't be displayed
+    if field_info.json_schema_extra:
+        _ = field_info.json_schema_extra.pop("cli", None)
+
     cli_short_long: Tuple1or2Type = __process_tuple(cli_custom_, default_long_arg)
 
     is_required = field_info.is_required()
