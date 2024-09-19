@@ -5,6 +5,7 @@ import sys
 import traceback
 import logging
 import typing
+from copy import deepcopy
 from typing import overload
 from typing import Any, Mapping, Callable
 
@@ -136,10 +137,6 @@ def _add_pydantic_field_to_parser(
         if field_info.json_schema_extra is None  # type: ignore
         else field_info.json_schema_extra.get("cli", (default_long_arg,))  # type: ignore
     )
-    # Delete cli so the metadata isn't in FieldInfo and won't be displayed
-    if field_info.json_schema_extra:
-        _ = field_info.json_schema_extra.pop("cli", None)
-
     cli_short_long: Tuple1or2Type = __process_tuple(cli_custom_, default_long_arg)
 
     is_required = field_info.is_required()
@@ -152,6 +149,12 @@ def _add_pydantic_field_to_parser(
         default_value = override_value
         is_required = False
 
+    # Delete cli and json_schema_extras metadata isn't in FieldInfo and won't be displayed
+    # Not sure this is the correct, or expected behavior.
+    cfield_info = deepcopy(field_info)
+    cfield_info.json_schema_extra = None
+    help_ = repr(cfield_info)
+
     # log.debug(f"Creating Argument Field={field_id} opts:{cli_short_long}, allow_none={field.allow_none} default={default_value} type={field.type_} required={is_required} dest={field_id} desc={description}")
 
     # MK. I don't think there's any point trying to fight with argparse to get
@@ -159,7 +162,7 @@ def _add_pydantic_field_to_parser(
     shape_kw = {"nargs": "+"} if is_sequence else {}
     parser.add_argument(
         *cli_short_long,
-        help=repr(field_info),
+        help=help_,
         default=default_value,
         dest=field_id,
         required=is_required,
