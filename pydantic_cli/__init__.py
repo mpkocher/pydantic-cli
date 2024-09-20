@@ -153,7 +153,8 @@ def _add_pydantic_field_to_parser(
     # Not sure if this is the correct, or expected behavior.
     cfield_info = deepcopy(field_info)
     cfield_info.json_schema_extra = None
-    help_ = f"Field({cfield_info.__repr_str__(", ")})"
+    # write this to keep backward compat with 3.10
+    help_ = "".join(["Field(", field_info.__repr_str__(", "), ")"])
 
     # log.debug(f"Creating Argument Field={field_id} opts:{cli_short_long}, allow_none={field.allow_none} default={default_value} type={field.type_} required={is_required} dest={field_id} desc={description}")
 
