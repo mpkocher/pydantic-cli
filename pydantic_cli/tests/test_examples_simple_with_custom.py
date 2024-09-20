@@ -10,4 +10,4 @@ class TestExamples(_TestHarness[Options]):
         self.run_config(["-i", "/path/to/file.txt", "-f", "1.0", "-m", "2"])
 
     def test_simple_02(self):
-        self.run_config(["-i", "/path/to/file.txt", "-f", "1.0"])
+        self.run_config(["-i", "/path/to/file.txt", "-f", "1.0", "--beta", "b"])

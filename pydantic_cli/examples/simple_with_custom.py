@@ -1,6 +1,6 @@
 import sys
 import logging
-from typing import Union
+from typing import Union, Literal
 
 from pydantic import Field
 
@@ -17,6 +17,7 @@ class Options(Cmd):
     max_records: int = Field(10, cli=("-m", "--max-records"))
     min_filter_score: float = Field(..., cli=("-f", "--filter-score"))
     alpha: Union[int, str] = 1
+    beta: Literal["a", "b"] = "a"
 
     def run(self) -> None:
         log.info(
