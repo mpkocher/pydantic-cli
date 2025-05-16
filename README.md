@@ -47,9 +47,9 @@ my-tool --input_file /path/to/file.txt --max_records 1234
 
 This requires two components.
 
-- Create Pydantic Data Model of type `T` 
-- write a function that takes an instance of `T` and returns the exit code (e.g., 0 for success, non-zero for failure).
-- pass the `T` into to the `to_runner` function, or the `run_and_exit`
+- Create Pydantic Data Model `T` by extending `Cmd` 
+- Add a method `def run(self) -> None`. This should raise an exception on error, or return `None` on success.
+- pass the *class* `T` into to the `to_runner` function, or the `run_and_exit`
 
 Explicit example show below.  
 
