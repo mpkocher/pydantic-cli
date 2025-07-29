@@ -23,8 +23,8 @@ class State(str, Enum):
 
 
 class Options(Cmd):
-    states: Set[State]
     mode: Mode
+    states: Set[State]  # sequence positionals must be after other positionals
     max_records: int = 100
 
     def run(self) -> None:

@@ -8,18 +8,18 @@ class TestExamples(_TestHarness[Options]):
     CONFIG = HarnessConfig(Options)
 
     def test_simple_01(self):
-        args = ["--states", "RUNNING", "FAILED", "--mode", "alpha"]
+        args = ["--states", "RUNNING", "FAILED", "--", "alpha"]
         self.run_config(args)
 
     def test_case_insensitive(self):
-        args = ["--states", "successful", "failed", "--mode", "ALPHA"]
+        args = ["--states", "successful", "failed", "--", "ALPHA"]
         self.run_config(args)
 
     def test_bad_enum_by_value(self):
         args = [
             "--states",
             "RUNNING",
-            "--mode",
+            "--",
             "1",
         ]
         self.run_config(args, exit_code=1)
@@ -28,7 +28,7 @@ class TestExamples(_TestHarness[Options]):
         args = [
             "--states",
             "RUNNING",
-            "--mode",
+            "--",
             "DRAGON",
         ]
         self.run_config(args, exit_code=1)

@@ -8,17 +8,15 @@ class TestExamples(_TestHarness[Options]):
     CONFIG = HarnessConfig(Options)
 
     def test_simple_01(self):
-        args = ["--states", "RUNNING", "FAILED", "--max_records", "1234", "--mode", "1"]
+        args = ["--max_records", "1234", "1", "RUNNING", "FAILED"]
         self.run_config(args)
 
     def test_bad_enum_value(self):
         args = [
-            "--states",
-            "RUNNING",
-            "BAD_STATE",
             "--max_records",
             "1234",
-            "--mode",
             "1",
+            "RUNNING",
+            "BAD_STATE",
         ]
         self.run_config(args, exit_code=1)

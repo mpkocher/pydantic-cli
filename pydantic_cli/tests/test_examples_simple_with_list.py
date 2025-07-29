@@ -12,7 +12,7 @@ class TestExamples(_TestHarness[Options]):
             "--input_file",
             "/path/to/file.txt",
             "/and/another/file.txt",
-            "--max_record",
+            "--max_records",
             "1234",
             "--filters",
             "alpha",
