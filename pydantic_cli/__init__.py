@@ -73,15 +73,6 @@ def _is_sequence(annotation: Any) -> bool:
     return get_origin(annotation) in ALL_SEQ
 
 
-@pydantic.validate_call
-def __validate_tuple(json: Any) -> tuple[str, ...]:
-    """
-    If the custom args are provided as only short, then
-    add the long version. Or just use the
-    """
-    return TypeAdapter(tuple[str, ...]).validate_python(json)
-
-
 def _add_pydantic_field_to_parser(
     parser: CustomArgumentParser,
     field_id: str,
@@ -125,7 +116,7 @@ def _add_pydantic_field_to_parser(
 
     if cli := isinstance(field_info.json_schema_extra, dict) and field_info.json_schema_extra.get("cli"):
         # use custom cli annotation if provided
-        args = __validate_tuple(cli)
+        args = TypeAdapter(tuple[str, ...]).validate_python(cli)
     else:
         # positional if required, else named optional
         args = () if is_required else (f"{long_prefix}{field_id}",)
