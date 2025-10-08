@@ -324,8 +324,9 @@ def _runner(
         prologue_handler(cmd)
         # This should raise if there's an issue
         out = cmd.run()
+        # this is a check to make sure the caller has returned the correct type.
         if out is not None:
-            log.warning("Cmd.run() should return None or raise an exception.")
+            log.warning("Cmd.run() should return None or raise an exception.") # type: ignore[unreachable]
         exit_code = 0
     except TerminalEagerCommand:
         exit_code = 0
