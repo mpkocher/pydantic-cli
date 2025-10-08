@@ -326,7 +326,7 @@ def _runner(
         out = cmd.run()
         # this is a check to make sure the caller has returned the correct type.
         if out is not None:
-            log.warning("Cmd.run() should return None or raise an exception.") # type: ignore[unreachable]
+            log.warning("Cmd.run() should return None or raise an exception.")  # type: ignore[unreachable]
         exit_code = 0
     except TerminalEagerCommand:
         exit_code = 0
