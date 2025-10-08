@@ -197,11 +197,16 @@ def pydantic_class_to_parser(
     in the Pydantic data model class.
 
     """
-    p0 = CustomArgumentParser(description=description, add_help=False)
+    cli_config = _get_cli_config_from_model(cls)
+
+    if sys.version_info >= (3, 14):
+        p0 = CustomArgumentParser(
+            description=description, add_help=False, color=cli_config["cli_color"]
+        )
+    else:
+        p0 = CustomArgumentParser(description=description, add_help=False)
 
     p = _add_pydantic_class_to_parser(p0, cls, default_value_override)
-
-    cli_config = _get_cli_config_from_model(cls)
 
     if cli_config["cli_json_enable"]:
         _parser_add_arg_json_file(p, cli_config)
