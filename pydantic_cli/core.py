@@ -18,7 +18,7 @@ class Cmd(BaseModel):
     def run(self) -> None: ...
 
 
-class CliConfig(ConfigDict, total=False):
+class CliConfig(ConfigDict):
     """
     See `_get_cli_config_from_model` for defaults.
 
