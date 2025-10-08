@@ -39,12 +39,19 @@ from .shell_completion import (
     HAS_AUTOCOMPLETE_SUPPORT,
 )
 
+
+def _default_no_color(*args, **kwargs) -> bool:
+    return False
+
+
+# Because these are ENV vars, this needs to be configure
+# lazily and called close to the call site
 try:
     import _colorize
 
-    CAN_COLORIZE = _colorize.can_colorize()
+    CAN_COLORIZE = _colorize.can_colorize
 except ImportError:
-    CAN_COLORIZE = False
+    CAN_COLORIZE = _default_no_color
 
 
 log = logging.getLogger(__name__)
@@ -248,7 +255,8 @@ def _get_error_exit_code(ex: BaseException, default_exit_code: int = 1) -> int:
 
 def _colorize_exception(ex: BaseException, file=sys.stderr) -> None:
     if sys.version_info >= (3, 14):
-        traceback.print_exception(ex, colorize=CAN_COLORIZE, file=file)
+        # As of 3.14, colorize is still not a public API
+        traceback.print_exception(ex, colorize=CAN_COLORIZE(file=file), file=file)
     else:
         traceback.print_exception(ex, file=file)
 
