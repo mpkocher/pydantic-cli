@@ -137,6 +137,10 @@ class MinOptions(Cmd):
 
 See [Pydantic docs](https://docs.pydantic.dev/latest/concepts/validators/) for more details.
 
+For Python >= 3.14, support for color enabled by default. 
+
+![pydantic-cli-colorized-subparser-example](https://github.com/user-attachments/assets/29deadb2-4d1c-4b05-8c7b-a9ec8ecd8346)
+
 ## Loading Configuration using JSON
 
 User created commandline tools using `pydantic-cli` can also load entire models or **partially** defined Pydantic data models from JSON files.
