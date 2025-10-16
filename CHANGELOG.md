@@ -1,5 +1,12 @@
 # CHANGELOG
 
+## Version 10.0.0
+
+- Support for Python 3.14
+- color support for `--help` and error messages (requires Python >= 3.14)
+- Improvement of `Field` display
+- a bit of heavy-handed disabling of Pydantic warnings.
+
 ## Version 7.0.0
 
 - Drop support for python > 3.10
