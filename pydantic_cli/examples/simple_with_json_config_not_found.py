@@ -1,6 +1,8 @@
 import sys
 import logging
 
+from pydantic import Field
+
 from pydantic_cli import run_and_exit, CliConfig, Cmd
 
 log = logging.getLogger(__name__)
@@ -19,7 +21,7 @@ class Options(Cmd):
         cli_json_validate_path=False,
     )
 
-    input_file: str
+    input_file: str = Field(cli=("--input_file",))
     max_records: int = 10
 
     def run(self) -> None:

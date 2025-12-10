@@ -7,15 +7,14 @@ class TestExamples(_TestHarness[Options]):
     CONFIG = HarnessConfig(Options)
 
     def test_simple_01(self):
-        self.run_config(["--input_file", "/path/to/file.txt"])
+        self.run_config(["/path/to/file.txt"])
 
     def test_simple_02(self):
-        self.run_config(["--input_file", "/path/to/file.txt", "--run_training", "y"])
+        self.run_config(["/path/to/file.txt", "--run_training", "y"])
 
     def test_simple_03(self):
         self.run_config(
             [
-                "--input_file",
                 "/path/to/file.txt",
                 "--run_training",
                 "true",

@@ -2,7 +2,6 @@ from . import _TestHarness, HarnessConfig
 
 from pydantic_cli.examples.simple import Options
 
-
 class TestExamples(_TestHarness[Options]):
 
     CONFIG = HarnessConfig(Options)

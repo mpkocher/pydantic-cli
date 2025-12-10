@@ -9,9 +9,9 @@ class TestExample(_TestHarness[Opts]):
 
     CONFIG = HarnessConfig(Opts)
 
-    def _util(self, d, more_args):
+    def _run_cmd_with_config(self, config, more_args):
         with NamedTemporaryFile(mode="w", delete=True) as f:
-            json.dump(d, f)
+            json.dump(config, f)
             f.flush()
             args = ["--json-training", str(f.name)] + more_args
             self.run_config(args)
@@ -24,9 +24,9 @@ class TestExample(_TestHarness[Opts]):
             alpha=1.234,
             beta=9.854,
         )
-        self._util(opt.model_dump(), [])
+        self._run_cmd_with_config(opt.model_dump(), [])
 
     def test_simple_partial_json(self):
-        d = dict(max_records=12, min_filter_score=1.024, alpha=1.234, beta=9.854)
+        config = dict(max_records=12, min_filter_score=1.024, alpha=1.234, beta=9.854)
 
-        self._util(d, ["--hdf_file", "/path/to/file.hdf5"])
+        self._run_cmd_with_config(config, ["/path/to/file.hdf5"])

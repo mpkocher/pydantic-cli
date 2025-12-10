@@ -8,12 +8,13 @@ import logging
 import typing
 from copy import deepcopy
 from typing import overload
-from typing import Any, Mapping, Callable
+from typing import Any, Mapping, Callable, get_origin
 
 
 import pydantic
-from pydantic import BaseModel, PydanticDeprecatedSince20
+from pydantic import BaseModel, TypeAdapter, PydanticDeprecatedSince20
 from pydantic.fields import FieldInfo
+from pydantic.config import JsonDict
 
 # This is not great. Pydantic >= 3 changing Field will require backward incompatible
 # changes to the API of Field(int, cli=('-m', '--max-records')) and pydantic-cli will
@@ -23,7 +24,6 @@ warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 from ._version import __version__
 
-from .core import M, Tuple1or2Type, Tuple1Type, Tuple2Type
 from .core import EpilogueHandlerType, PrologueHandlerType, ExceptionHandlerType
 from .core import (
     CliConfig,
@@ -91,33 +91,7 @@ def _is_sequence(annotation: Any) -> bool:
     SET_TYPES: list[type] = [set, typing.Set, collections.abc.MutableSet]
     FROZEN_SET_TYPES: list[type] = [frozenset, typing.FrozenSet, collections.abc.Set]
     ALL_SEQ = set(LIST_TYPES + SET_TYPES + FROZEN_SET_TYPES)
-
-    # what is exactly going on here?
-    return getattr(annotation, "__origin__", "NOTFOUND") in ALL_SEQ
-
-
-@pydantic.validate_call
-def __process_tuple(tuple_one_or_two: Tuple1or2Type, long_arg: str) -> Tuple1or2Type:
-    """
-    If the custom args are provided as only short, then
-    add the long version. Or just use the
-    """
-    lx: list[str] = list(tuple_one_or_two)
-
-    nx = len(lx)
-    if nx == 1:
-        if len(lx[0]) == 2:  # xs = '-s'
-            return lx[0], long_arg
-        else:
-            # this is the positional only case
-            return (lx[0],)
-    elif nx == 2:
-        # the explicit form is provided
-        return lx[0], lx[1]
-    else:
-        raise ValueError(
-            f"Unsupported format for `{tuple_one_or_two}` type={type(tuple_one_or_two)}. Expected 1 or 2 tuple."
-        )
+    return get_origin(annotation) in ALL_SEQ
 
 
 def _add_pydantic_field_to_parser(
@@ -151,15 +125,6 @@ def _add_pydantic_field_to_parser(
                                           it's not well-defined or supported. This should be List[T]
     """
 
-    default_long_arg = "".join([long_prefix, field_id])
-    # there's mypy type issues here
-    cli_custom_: Tuple1or2Type = (
-        (default_long_arg,)
-        if field_info.json_schema_extra is None  # type: ignore
-        else field_info.json_schema_extra.get("cli", (default_long_arg,))  # type: ignore
-    )
-    cli_short_long: Tuple1or2Type = __process_tuple(cli_custom_, default_long_arg)
-
     is_required = field_info.is_required()
     default_value = field_info.default
     is_sequence = _is_sequence(field_info.annotation)
@@ -170,25 +135,32 @@ def _add_pydantic_field_to_parser(
         default_value = override_value
         is_required = False
 
+    if cli := isinstance(field_info.json_schema_extra, dict) and field_info.json_schema_extra.get("cli"):
+        # use custom cli annotation if provided
+        args = TypeAdapter(tuple[str, ...]).validate_python(cli)
+    else:
+        # positional if required, else named optional
+        args = () if is_required else (f"{long_prefix}{field_id}",)
+
     # Delete cli and json_schema_extras metadata isn't in FieldInfo and won't be displayed
     # Not sure if this is the correct, or expected behavior.
     cfield_info = deepcopy(field_info)
     cfield_info.json_schema_extra = None
     # write this to keep backward compat with 3.10
-    help_ = "".join(["Field(", cfield_info.__repr_str__(", "), ")"])
+    help_ = field_info.description or "".join(["Field(", field_info.__repr_str__(", "), ")"])
 
-    # log.debug(f"Creating Argument Field={field_id} opts:{cli_short_long}, allow_none={field.allow_none} default={default_value} type={field.type_} required={is_required} dest={field_id} desc={description}")
-
-    # MK. I don't think there's any point trying to fight with argparse to get
-    # the types correct here. It's just a mess from a type standpoint.
-    shape_kw = {"nargs": "+"} if is_sequence else {}
+    kwargs: dict[str, Any] = {}
+    if is_sequence:
+        kwargs["nargs"] = "+"
+    if len(args) > 0:
+        # only provide required to non-positional options
+        kwargs["required"] = is_required
     parser.add_argument(
-        *cli_short_long,
+        *args,
         help=help_,
         default=default_value,
         dest=field_id,
-        required=is_required,
-        **shape_kw,  # type: ignore
+        **kwargs,
     )
 
     return parser
