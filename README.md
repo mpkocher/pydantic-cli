@@ -23,6 +23,7 @@ pip install pydantic-cli
 1. Clear interface between the CLI and your application code
 1. Leverage the static analyzing tool [**mypy**](http://mypy.readthedocs.io) to catch type errors in your commandline tool   
 1. Easy to test (due to reasons defined above)
+1. Color support for `--help` and for displaying errors (with Python >= 3.14)
 
 ### Motivating Use cases
 
@@ -30,11 +31,11 @@ pip install pydantic-cli
 - Internal tools driven by a Pydantic data model/schema
 - Configuration heavy tools that are driven by either partial (i.e, "presets") or complete configuration files defined using JSON
 
-Note: Newer version of `Pydantic-settings` has support for commandline functionality. It allows mixing of "sources", such as ENV, YAML, JSON and might satisfy your requirements.  
+Note: Newer version of `pydantic-settings` has support for commandline functionality. It allows mixing of "sources", such as ENV, YAML, JSON and might satisfy your requirements.  
 
 https://docs.pydantic.dev/2.8/concepts/pydantic_settings/#settings-management
 
-`Pydantic-cli` predates the CLI component of `pydantic-settings` and has a few different requirements and design approach. 
+`pydantic-cli` predates the CLI component of `pydantic-settings` and has a few different requirements and design approach. 
 
 ## Quick Start
 
@@ -135,6 +136,10 @@ class MinOptions(Cmd):
 ```
 
 See [Pydantic docs](https://docs.pydantic.dev/latest/concepts/validators/) for more details.
+
+For Python >= 3.14, support for color enabled by default. 
+
+![pydantic-cli-colorized-subparser-example](https://github.com/user-attachments/assets/29deadb2-4d1c-4b05-8c7b-a9ec8ecd8346)
 
 ## Loading Configuration using JSON
 
@@ -455,6 +460,9 @@ class CliConfig(ConfigDict, total=False):
     # https://github.com/iterative/shtab
     cli_shell_completion_enable: bool
     cli_shell_completion_flag: str
+    
+    # defaults to true, only supported for python >= 3.14
+    cli_color: bool 
 ```
 
 ## AutoComplete leveraging shtab

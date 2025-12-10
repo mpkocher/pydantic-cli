@@ -3,6 +3,7 @@ import collections
 import datetime
 import sys
 import traceback
+import warnings
 import logging
 import typing
 from copy import deepcopy
@@ -11,9 +12,15 @@ from typing import Any, Mapping, Callable, get_origin
 
 
 import pydantic
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, TypeAdapter, PydanticDeprecatedSince20
 from pydantic.fields import FieldInfo
 from pydantic.config import JsonDict
+
+# This is not great. Pydantic >= 3 changing Field will require backward incompatible
+# changes to the API of Field(int, cli=('-m', '--max-records')) and pydantic-cli will
+# have to figure out a better approach. Field(int, json_schema_extra=dict(cli=('-m', '--max-records'))
+# is too verbose
+warnings.filterwarnings("ignore", category=PydanticDeprecatedSince20)
 
 from ._version import __version__
 
@@ -26,12 +33,26 @@ from .utils import _load_json_file, _resolve_file, _resolve_file_or_none_and_war
 from .argparse import CustomArgumentParser, EagerHelpAction
 from .argparse import _parser_add_help, _parser_add_version
 from .argparse import FailedExecutionException, TerminalEagerCommand
-from argparse import ArgumentDefaultsHelpFormatter
 from .shell_completion import (
     EmitShellCompletionAction,
     add_shell_completion_arg,
     HAS_AUTOCOMPLETE_SUPPORT,
 )
+
+
+def _default_no_color(*args, **kwargs) -> bool:
+    return False
+
+
+# Because these are ENV vars, this needs to be configure
+# lazily and called close to the call site
+try:
+    import _colorize
+
+    CAN_COLORIZE = _colorize.can_colorize
+except ImportError:
+    CAN_COLORIZE = _default_no_color
+
 
 log = logging.getLogger(__name__)
 
@@ -169,11 +190,16 @@ def pydantic_class_to_parser(
     in the Pydantic data model class.
 
     """
-    p0 = CustomArgumentParser(description=description, add_help=False)
+    cli_config = _get_cli_config_from_model(cls)
+
+    if sys.version_info >= (3, 14):
+        p0 = CustomArgumentParser(
+            description=description, add_help=False, color=cli_config["cli_color"]
+        )
+    else:
+        p0 = CustomArgumentParser(description=description, add_help=False)
 
     p = _add_pydantic_class_to_parser(p0, cls, default_value_override)
-
-    cli_config = _get_cli_config_from_model(cls)
 
     if cli_config["cli_json_enable"]:
         _parser_add_arg_json_file(p, cli_config)
@@ -192,29 +218,41 @@ def pydantic_class_to_parser(
 def _get_error_exit_code(ex: BaseException, default_exit_code: int = 1) -> int:
     if isinstance(ex, FailedExecutionException):
         exit_code = ex.exit_code
+    elif isinstance(ex, OSError):
+        exit_code = ex.errno
     else:
         exit_code = default_exit_code
     return exit_code
 
 
-def default_exception_handler(ex: BaseException) -> int:
-    """
-    Maps/Transforms the Exception type to an integer exit code
-    """
-    # this might need the opts instance, however
-    # this isn't really well-defined if there's an
-    # error at that level
-    sys.stderr.write(str(ex))
-    exc_type, exc_value, exc_traceback = sys.exc_info()
-    traceback.print_tb(exc_traceback, file=sys.stderr)
-    return _get_error_exit_code(ex, 1)
+def _colorize_exception(ex: BaseException, file=sys.stderr) -> None:
+    if sys.version_info >= (3, 14):
+        # As of 3.14, colorize is still not a public API
+        traceback.print_exception(ex, colorize=CAN_COLORIZE(file=file), file=file)
+    else:
+        traceback.print_exception(ex, file=file)
 
 
 def default_minimal_exception_handler(ex: BaseException) -> int:
     """
     Only write a terse error message. Don't output the entire stacktrace
     """
-    sys.stderr.write(str(ex))
+    _colorize_exception(ex, file=sys.stderr)
+    return _get_error_exit_code(ex, 1)
+
+
+# for backward compatibility. Also, wish the naming was consistent.
+default_exception_handler = default_minimal_exception_handler
+default_exception_handler_minimal = default_minimal_exception_handler
+
+
+def default_exception_handler_verbose(ex: BaseException) -> int:
+    """
+    Verbose Exception + Entire Traceback
+    """
+    _colorize_exception(ex, file=sys.stderr)
+    exc_type, exc_value, exc_traceback = sys.exc_info()
+    traceback.print_tb(exc_traceback, file=sys.stderr)
     return _get_error_exit_code(ex, 1)
 
 
@@ -296,8 +334,9 @@ def _runner(
         prologue_handler(cmd)
         # This should raise if there's an issue
         out = cmd.run()
+        # this is a check to make sure the caller has returned the correct type.
         if out is not None:
-            log.warning("Cmd.run() should return None or raise an exception.")
+            log.warning("Cmd.run() should return None or raise an exception.")  # type: ignore[unreachable]
         exit_code = 0
     except TerminalEagerCommand:
         exit_code = 0
@@ -419,18 +458,16 @@ def _to_subparser(
     overrides: dict[str, Any] | None = None,
 ) -> CustomArgumentParser:
 
-    p = CustomArgumentParser(
-        description=description, formatter_class=ArgumentDefaultsHelpFormatter
-    )
+    if sys.version_info >= (3, 14):
+        p = CustomArgumentParser(description=description, add_help=False, color=True)
+    else:
+        p = CustomArgumentParser(description=description, add_help=False)
 
     # log.debug(f"Creating parser from models {models}")
     sp = p.add_subparsers(
-        dest="commands", help="Subparser Commands", parser_class=CustomArgumentParser
+        dest="commands", title="Subparser Commands", parser_class=CustomArgumentParser
     )
 
-    # This fixes an unexpected case where the help isn't called?
-    # is this a Py2 to Py3 change?
-    sp.required = True
     overrides_defaults = {} if overrides is None else overrides
 
     for subparser_id, cmd in cmds.items():
@@ -450,6 +487,8 @@ def _to_subparser(
         _parser_add_help(spx)
 
         spx.set_defaults(cmd=cmd)
+
+    _parser_add_help(p)
 
     if version is not None:
         _parser_add_version(p, version)

@@ -18,7 +18,7 @@ class Cmd(BaseModel):
     def run(self) -> None: ...
 
 
-class CliConfig(ConfigDict, total=False):
+class CliConfig(ConfigDict):
     """
     See `_get_cli_config_from_model` for defaults.
 
@@ -44,6 +44,9 @@ class CliConfig(ConfigDict, total=False):
     # https://github.com/iterative/shtab
     cli_shell_completion_enable: bool
     cli_shell_completion_flag: str
+
+    # Only supported for python >= 3.14
+    cli_color: bool
 
 
 def _get_cli_config_from_model(cls: type[M]) -> CliConfig:
@@ -74,6 +77,8 @@ def _get_cli_config_from_model(cls: type[M]) -> CliConfig:
     cli_shell_completion_flag = cast(
         str, cls.model_config.get("cli_shell_completion_flag", "--emit-completion")
     )
+    cli_color: bool = cast(bool, cls.model_config.get("cli_color", True))
+
     return CliConfig(
         cli_json_key=cli_json_key,
         cli_json_enable=cli_json_enable,
@@ -82,4 +87,5 @@ def _get_cli_config_from_model(cls: type[M]) -> CliConfig:
         cli_json_validate_path=cli_json_validate_path,
         cli_shell_completion_enable=cli_shell_completion_enable,
         cli_shell_completion_flag=cli_shell_completion_flag,
+        cli_color=cli_color,
     )
